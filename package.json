@@ -1,0 +1,12 @@
+{
+  "name": "online-flight-sim",
+  "private": true,
+  "type": "module",
+  "description": "Online Flight Sim: a free, non-commercial hobby flight simulator.",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

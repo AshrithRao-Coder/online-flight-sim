@@ -1,0 +1,507 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#151c1b" />
+    <title>Online Flight Sim · Your next horizon</title>
+    <meta
+      name="description"
+      content="Fly the world over satellite imagery and measured terrain. A single-player browser flight simulator."
+    />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23111019'/%3E%3Ccircle cx='32' cy='32' r='19' fill='%23d9ff78' stroke='%23b8a0ff' stroke-width='4'/%3E%3Cpath d='M13 32h38M32 13v38' stroke='%23111019' stroke-width='4'/%3E%3C/svg%3E"
+    />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..800;1,9..144,400..800&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+    />
+    <link rel="stylesheet" href="interface.css?v=1792337812100" />
+  </head>
+  <body>
+    <main id="landing">
+      <header class="topbar">
+        <a class="brand" href="./" aria-label="Online Flight Sim home"
+          ><span class="brand-mark" aria-hidden="true"></span
+          ><span class="brand-word">Online Flight Sim</span
+          ><span class="brand-caption">Flight Almanac · Vol. 01</span></a
+        >
+        <nav class="mission-rail" aria-label="Flight deck navigation">
+          <button class="rail-item active" id="play-link">
+            <span>01</span>Hangar
+          </button>
+          <button class="rail-item" id="guide-link">
+            <span>02</span>Handbook
+          </button>
+        </nav>
+        <div class="pilot-id">
+          <span class="live-badge">Systems nominal</span
+          ><label
+            >Pilot<input
+              id="callsign"
+              value="SKY-01"
+              maxlength="16"
+              aria-label="Callsign"
+          /></label>
+        </div>
+      </header>
+      <section class="main-menu" data-stage="aircraft">
+        <div class="dashboard-heading">
+          <div class="heading-copy">
+            <span class="eyebrow" id="dashboard-kicker">01 / THE HANGAR</span>
+            <h1 id="dashboard-title">Your fleet. Your freedom.</h1>
+            <p id="dashboard-caption">
+              Pick your machine. Make your own flight plan.
+            </p>
+          </div>
+          <ol class="stepper" aria-hidden="true">
+            <li data-for="aircraft"><b>I</b>Aircraft</li>
+            <li data-for="departure"><b>II</b>Departure</li>
+            <li data-for="setup"><b>III</b>Briefing</li>
+          </ol>
+        </div>
+        <div class="menu-left">
+          <div class="flow">
+            <div class="step active" id="step-aircraft">
+              <div class="step-head">
+                <span class="step-no">01</span> AIRCRAFT CONFIGURATION
+              </div>
+              <div class="hangar-grid">
+                <div class="hangar-showcase">
+                  <div class="hangar-feature">
+                    <div class="feature-copy">
+                      <span class="eyebrow" id="feature-maker"
+                        >AIRBUS / SELECTED AIRFRAME</span
+                      >
+                      <h2 id="feature-name">A320</h2>
+                      <div class="feature-type" id="feature-description"></div>
+                      <div class="feature-actions">
+                        <button id="feature-plan" class="primary">
+                          BUILD FLIGHT PLAN →
+                        </button>
+                        <button id="feature-specs">AIRFRAME SPECS ↗</button>
+                      </div>
+                      <div class="hangar-livery">
+                        <span class="eyebrow">LIVERY · <b id="hangar-livery-name">FACTORY WHITE</b></span>
+                        <div class="hangar-liveries" id="hangar-liveries"></div>
+                      </div>
+                    </div>
+                    <div class="feature-view">
+                      <img
+                        class="feature-image"
+                        id="feature-image"
+                        src="a320.png"
+                        alt="Selected aircraft"
+                      />
+                      <span class="feature-loading" id="feature-loading" hidden
+                        >LOADING 3D MODEL…</span
+                      >
+                      <canvas
+                        class="feature-canvas"
+                        id="feature-canvas"
+                        hidden
+                        aria-label="3D preview of the selected aircraft in your livery. Drag to turn it, scroll or pinch to zoom."
+                      ></canvas>
+                      <div class="feature-zoom" id="feature-zoom">
+                        <button id="feature-zoom-in" aria-label="Zoom in">+</button
+                        ><button id="feature-zoom-out" aria-label="Zoom out">−</button>
+                        <span>DRAG · SCROLL TO ZOOM</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="feature-stats">
+                    <div>
+                      <small>CRUISE SPEED</small><b id="feature-speed">259</b>
+                      <em>KT</em>
+                    </div>
+                    <div>
+                      <small>WINGSPAN</small><b id="feature-span">35.8</b>
+                      <em>M</em>
+                    </div>
+                    <div>
+                      <small>FLEET SIZE</small><b id="fleet-count">24</b>
+                      <em>AIRFRAMES</em>
+                    </div>
+                  </div>
+                </div>
+                <div class="hangar-catalogue">
+                  <div class="catalogue-head">
+                    <span>Fleet manifest</span><span id="fleet-results"></span>
+                  </div>
+                  <div class="catalogue-tools">
+                    <input
+                      id="fleet-search"
+                      type="search"
+                      placeholder="Find an aircraft…"
+                      aria-label="Search aircraft"
+                    /><select
+                      id="fleet-category"
+                      aria-label="Aircraft category"
+                    >
+                      <option value="all">Every airframe</option>
+                      <option value="airliner">Airliners</option>
+                      <option value="light">Light aircraft</option>
+                      <option value="turboprop">Turboprops</option>
+                      <option value="business">Business jets</option>
+                      <option value="special">Special & military</option>
+                      <option value="rotor">Rotorcraft</option>
+                    </select>
+                  </div>
+                  <div id="fleet-list" class="fleet"></div>
+                  <button class="primary wide big" id="step-next">
+                    CONTINUE TO FLIGHT PLAN →
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="step" id="step-departure" hidden>
+              <div class="step-head">
+                <span class="step-no">02</span> DEPARTURE PLANNER
+                <button class="step-change" id="back-aircraft">
+                  ◂ <span id="step-ac-name">A320</span>
+                </button>
+              </div>
+              <h2 class="stage-title">Where are we heading?</h2>
+              <p class="stage-copy">
+                Search the airport directory, choose a landmark, or spin the
+                globe to discover somewhere new.
+              </p>
+              <div class="search-wrap">
+                <input
+                  id="departure-search"
+                  placeholder="Search any city, airport, place or coordinates…"
+                  aria-label="Search departure"
+                  autocomplete="off"
+                />
+              </div>
+              <div class="results" id="departure-results"></div>
+              <div class="chips-head">QUICK DEPARTURES</div>
+              <div class="quick-chips" id="landmarks"></div>
+              <div class="step-foot">
+                <button class="primary wide big" id="departure-next">
+                  REVIEW FLIGHT BRIEFING →
+                </button>
+                <div class="row-links">
+                  <button class="link-btn" id="all-destinations">
+                    ALL DESTINATIONS</button
+                  ><button class="link-btn" id="missions">EXPEDITIONS</button
+                  ><button class="link-btn" id="school">FLIGHT ACADEMY</button>
+                </div>
+              </div>
+            </div>
+            <div class="step" id="step-setup" hidden>
+              <div class="step-head">
+                <span class="step-no">03</span>
+                <span id="cf-kicker">FLIGHT SETUP</span>
+                <button class="step-change" id="back-departure">◂ BACK</button>
+              </div>
+              <div class="pass">
+                <div class="pass-main">
+                  <span class="pass-label">Departure</span>
+                  <div class="cf-name" id="cf-name">Golden Gate</div>
+                  <div class="cf-sub" id="cf-sub">
+                    San Francisco · AIRBUS A320
+                  </div>
+                </div>
+                <div class="pass-stub" aria-hidden="true">
+                  <span class="pass-label">Gate</span><b>OFS</b
+                  ><span class="pass-code"></span>
+                </div>
+              </div>
+              <div class="cf-opts">
+                <div class="cf-opt">
+                  <label for="setup-callsign">YOUR CALLSIGN</label>
+                  <input
+                    id="setup-callsign"
+                    class="cs2-input"
+                    maxlength="16"
+                    placeholder="e.g. SKY-01"
+                  />
+                </div>
+                <div class="cf-opt">
+                  <label>TIME OF DAY</label>
+                  <div class="cf-chips" id="time-options">
+                    <button class="chip" data-time="dawn">DAWN</button
+                    ><button class="chip" data-time="day">DAY</button
+                    ><button class="chip" data-time="dusk">DUSK</button
+                    ><button class="chip" data-time="night">NIGHT</button>
+                  </div>
+                </div>
+                <div class="cf-opt cf-wide">
+                  <label>WEATHER</label>
+                  <div class="cf-chips" id="weather-options">
+                    <button class="chip" data-weather="clear">CLEAR</button
+                    ><button class="chip" data-weather="few">FEW</button
+                    ><button class="chip" data-weather="scattered">
+                      SCATTERED</button
+                    ><button class="chip" data-weather="overcast">
+                      OVERCAST</button
+                    ><button class="chip" data-weather="rain">RAIN</button
+                    ><button class="chip" data-weather="storm">STORM</button>
+                  </div>
+                </div>
+                <div class="cf-opt cf-dep cf-wide" id="cf-dep-opt">
+                  <label>DEPARTURE — WHERE YOU START</label>
+                  <div class="cf-chips" id="start-options">
+                    <button class="chip" data-start="air">IN THE AIR</button
+                    ><button class="chip" data-start="runway">ON RUNWAY</button>
+                  </div>
+                  <div class="cf-note" id="start-explanation">
+                    Start airborne at about 1,000 ft, already flying.
+                  </div>
+                </div>
+                <div class="cf-opt">
+                  <label for="setup-crosswind"
+                    >CROSSWIND · <b id="setup-crosswind-value">CALM</b></label
+                  >
+                  <input
+                    id="setup-crosswind"
+                    class="crosswind-input"
+                    type="range"
+                    min="-140"
+                    max="140"
+                    step="1"
+                    value="0"
+                    aria-label="Crosswind in knots"
+                  />
+                  <div class="crosswind-scale" aria-hidden="true">
+                    <span>◂ FROM LEFT</span><span>FROM RIGHT ▸</span>
+                  </div>
+                </div>
+
+              </div>
+              <button class="primary wide big takeoff" id="takeoff">
+                START EXPLORING ↗
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="menu-world">
+          <div class="world-heading">
+            <span><b>Live world</b></span><span>Satellite + elevation</span>
+          </div>
+          <div class="globe-frame">
+            <canvas id="globe" aria-label="Interactive Earth globe"></canvas>
+          </div>
+          <div class="globe-label" id="globe-label">
+            GOLDEN GATE · SAN FRANCISCO
+          </div>
+          <p>Turn the world · pick your next adventure</p>
+          <div class="world-stats">
+            <span id="airport-count">WORLDWIDE AIRPORTS</span
+            ><span><span id="world-fleet-count">YOUR FLEET</span></span
+            ><span>SATELLITE EARTH</span>
+          </div>
+        </div>
+      </section>
+      <footer>
+        <span>Online Flight Sim — a world above the everyday</span>
+        <button id="credits">DATA & ASSET CREDITS</button>
+      </footer>
+    </main>
+    <section id="game" hidden>
+      <canvas id="scene" aria-label="Flight simulator" tabindex="0"></canvas>
+      <div id="instruments">
+        <canvas id="pfd" aria-label="Heads-up display"></canvas>
+        <div class="instrument-label">HUD <b>LIVE</b></div>
+        <div class="pfd-frost" aria-hidden="true">
+          <i class="f-spd"></i><i class="f-att"></i><i class="f-alt"></i
+          ><i class="f-hdg"></i>
+        </div>
+        <div class="horizon-group" aria-hidden="true">
+          <div class="speed-tape">
+            <span>AIRSPEED</span><strong id="airspeed">0</strong
+            ><small>KT</small>
+            <div id="speed-warning"></div>
+          </div>
+          <div class="attitude">
+            <div class="attitude-world" id="attitude-world">
+              <div class="sky-half"></div>
+              <div class="ground-half"></div>
+              <div class="pitch-lines"></div>
+            </div>
+            <div class="wings"></div>
+            <div class="bank-mark"></div>
+          </div>
+          <div class="alt-tape">
+            <span>ALTITUDE</span><strong id="altitude">0</strong
+            ><small>FT</small>
+            <div id="vertical-speed">V/S 0</div>
+          </div>
+        </div>
+        <div class="heading-strip">
+          <span>HDG</span><b id="heading">000</b><span id="ap-mode"></span>
+        </div>
+        <div class="systems">
+          <span class="vs-cell"
+            ><small>V/S</small><b id="vertical-strip">+0</b></span
+          ><span class="thr-cell"
+            ><small>THR</small><b id="throttle-readout">70%</b></span
+          ><span id="flaps-readout">FLAPS UP</span
+          ><span id="gear-readout">GEAR UP</span
+          ><span id="engines-readout"><small>ENG</small><b>—</b></span
+          ><span><small>RA</small><b id="radio-altitude">—</b></span>
+        </div>
+        <div class="position"><small>POS</small><b id="position">—</b></div>
+      </div>
+      <div class="hud-corner">
+        <button id="deck-toggle" aria-expanded="false" aria-controls="deck">
+          <i></i><i></i><i></i><span>DECK</span><kbd>TAB</kbd>
+        </button>
+        <div class="flight-chip" id="flight-name"></div>
+      </div>
+      <nav class="toolbar" id="deck" aria-label="Command deck" hidden>
+        <div class="deck-head">
+          <span class="flight-brand"><i class="brand-mark"></i>Command deck</span>
+          <button id="deck-close" aria-label="Close command deck">✕</button>
+        </div>
+        <div class="deck-group">
+          <h5>Aircraft</h5>
+          <button data-action="engine" id="engine-button">ENG ON</button
+          ><button data-action="ap" id="ap-button">AP OFF</button
+          ><button data-action="reverse">REVERSE THRUST</button
+          ><button data-action="engines" id="engines-button">ENGINES</button
+          ><button data-action="failures" id="failures-button">FAILURES</button
+          ><button data-action="pause" id="pause-button">⏸ PAUSE</button>
+        </div>
+        <div class="deck-group">
+          <h5>View</h5>
+          <button class="view-button" data-action="camera">
+            VIEW <span id="camera-name">CHASE</span></button
+          ><button data-action="photo" class="photo-button">PHOTO</button
+          ><button data-action="buildings" id="buildings-button">3D ON</button
+          ><button data-action="fullscreen">FULLSCREEN</button>
+        </div>
+        <div class="deck-group">
+          <h5>Conditions</h5>
+          <button data-action="conditions" id="conditions-button">
+            TIME · WEATHER · WIND
+          </button>
+        </div>
+        <div class="deck-group">
+          <h5>Navigate</h5>
+          <button data-action="map">OPEN CHART</button>
+        </div>
+        <div class="deck-group">
+          <h5>System</h5>
+          <button data-action="controls">CONTROLS</button
+          ><button data-action="settings">SETTINGS</button
+          ><button data-action="menu" class="deck-exit">FLIGHT MENU</button>
+        </div>
+        <p class="deck-foot">Keys still work while the deck is open.</p>
+      </nav>
+      <div class="compass-wrap" aria-hidden="true">
+        <canvas id="compass" width="220" height="220"></canvas
+        ><b id="compass-heading">000°</b>
+      </div>
+      <div id="mission-hud" hidden></div>
+      <div id="toast" role="status"></div>
+      <div class="atc" id="atc">
+        <div class="comms-title">Radio <span>On air</span></div>
+        <header>
+          <span class="radio-dot"></span> <span class="atc-tag">ATC</span>
+          <b id="atc-station">AREA CONTROL <small>124.85</small></b
+          ><button id="atc-off">MUTE</button
+          ><button id="atc-collapse" aria-label="Collapse ATC">HIDE ▲</button>
+        </header>
+        <div id="atc-body">
+          <p id="atc-message">Area control standing by.</p>
+          <p id="atc-translation">
+            They can see you. Fly where you like — you are cleared to navigate
+            yourself.
+          </p>
+          <button id="call-tower">
+            <kbd>Y</kbd> CALL <span id="atc-call-station">AREA CONTROL</span>
+          </button>
+          <div id="atc-actions" hidden></div>
+        </div>
+        <div id="atc-free-flight">Free flight — fly anywhere</div>
+      </div>
+      <button id="minimap-button" aria-label="Open navigation chart">
+        <canvas id="minimap" width="256" height="256"></canvas>
+        <div class="map-dock-title">RADAR <b>OPEN ↗</b></div>
+        <span>HDG <b id="position-mini">000°</b></span>
+      </button>
+      <div id="crash-bar" role="alert" hidden>
+        <span><b>Flight ended</b> · the aircraft crashed</span>
+        <button id="crash-bar-track" class="primary">BACK ON TRACK</button
+        ><button id="crash-bar-restart">RESTART</button
+        ><button id="crash-bar-menu">MAIN MENU</button
+        ><button id="crash-bar-details">DETAILS</button>
+      </div>
+      <div id="destination-marker" hidden>◈ <span></span></div>
+      <div class="control-hint" id="control-hint">
+        E throttle up · Q throttle down · W A S D to fly
+      </div>
+      <div class="touch-controls">
+        <div class="joystick" id="joystick"><div id="stick"></div></div>
+        <label
+          >THR<input
+            id="touch-throttle"
+            type="range"
+            min="0"
+            max="100"
+            value="70"
+            aria-label="Throttle"
+        /></label>
+        <div class="touch-buttons">
+          <button data-action="gear">GEAR</button
+          ><button data-action="flaps">FLAP</button
+          ><button data-action="engine">ENG</button
+          ><button data-action="brakes" id="touch-brakes">BRK</button
+          ><button data-action="reverse">REV</button
+          ><button data-action="camera">CAM</button
+          ><button data-action="pause">⏸</button>
+        </div>
+      </div>
+      <div class="attribution">
+        © Esri · Maxar · Mapzen/AWS · OpenStreetMap contributors · OpenFreeMap
+      </div>
+    </section>
+    <div id="drawer" hidden>
+      <div
+        class="drawer-box"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="drawer-title"
+      >
+        <div class="drawer-head">
+          <span id="drawer-title">MISSIONS</span>
+          <button id="drawer-close" class="chip">✕ CLOSE</button>
+        </div>
+        <div id="drawer-body"></div>
+      </div>
+    </div>
+    <div id="loading" hidden>
+      <div class="loading-card">
+        <span class="loading-kicker">Online Flight Sim · Flight briefing</span>
+        <h2>Your horizon awaits.</h2>
+        <dl>
+          <dt>01 AIRCRAFT</dt>
+          <dd id="load-aircraft">—</dd>
+          <dt>02 CONDITIONS</dt>
+          <dd id="load-conditions">—</dd>
+          <dt>03 TERRAIN</dt>
+          <dd id="load-terrain">REAL SATELLITE + ELEVATION</dd>
+          <dt>04 START</dt>
+          <dd id="load-start">AIRBORNE · LOW PASS</dd>
+        </dl>
+        <div class="progress"><i id="load-progress"></i></div>
+        <p id="load-status">Streaming satellite imagery & elevation…</p>
+        <button id="cancel-loading">CANCEL</button>
+      </div>
+    </div>
+    <dialog id="panel">
+      <header>
+        <h2 id="panel-title"></h2>
+        <button id="panel-close" aria-label="Close dialog">✕</button>
+      </header>
+      <div id="panel-body"></div>
+    </dialog>
+    <script src="game.js?v=1792337812100"></script>
+  </body>
+</html>
