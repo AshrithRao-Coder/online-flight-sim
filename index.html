@@ -20,7 +20,7 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..800;1,9..144,400..800&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
     />
-    <link rel="stylesheet" href="interface.css?v=1792476874229" />
+    <link rel="stylesheet" href="interface.css?v=1792611742236" />
   </head>
   <body>
     <main id="landing">
@@ -244,6 +244,27 @@
                     ><button class="chip" data-weather="storm">STORM</button>
                   </div>
                 </div>
+                <div class="cf-opt cf-wide" id="cf-mode-opt" hidden>
+                  <label id="cf-mode-label">GAME MODE</label>
+                  <div class="cf-chips" id="mode-options">
+                    <button class="chip" data-mode="free">FREE FLIGHT</button
+                    ><button class="chip" data-mode="guns">FREE FIRE</button
+                    ><button class="chip" data-mode="drone">VS DRONES</button
+                    ><button class="chip" data-mode="bandit">VS BANDITS</button>
+                  </div>
+                  <div class="cf-chips" id="difficulty-row" hidden>
+                    <span class="cf-sublabel">BANDITS</span>
+                    <span id="difficulty-options"
+                      ><button class="chip" data-difficulty="easy">EASY</button
+                      ><button class="chip" data-difficulty="normal">NORMAL</button
+                      ><button class="chip" data-difficulty="hard">HARD</button
+                      ><button class="chip" data-difficulty="ace">ACE</button></span
+                    >
+                  </div>
+                  <div class="cf-note" id="mode-explanation">
+                    Fly anywhere, unarmed.
+                  </div>
+                </div>
                 <div class="cf-opt cf-dep cf-wide" id="cf-dep-opt">
                   <label>DEPARTURE — WHERE YOU START</label>
                   <div class="cf-chips" id="start-options">
@@ -353,7 +374,10 @@
           <i></i><i></i><i></i><span>DECK</span><kbd>TAB</kbd>
         </button>
         <div class="flight-chip" id="flight-name"></div>
+        <button class="mp-chip" id="mp-chip" data-action="multiplayer" hidden></button>
       </div>
+      <div id="kill-feed" aria-live="polite"></div>
+      <div id="mp-warning" role="alert" hidden></div>
       <nav class="toolbar" id="deck" aria-label="Command deck" hidden>
         <div class="deck-head">
           <span class="flight-brand"><i class="brand-mark"></i>Command deck</span>
@@ -381,6 +405,12 @@
           <button data-action="conditions" id="conditions-button">
             TIME · WEATHER · WIND
           </button>
+        </div>
+        <div class="deck-group">
+          <h5>Combat &amp; online</h5>
+          <button data-action="targets" class="vs-only" hidden>TARGETS</button
+          ><button data-action="reload" class="combat-only" hidden>RELOAD</button
+          ><button data-action="multiplayer">MULTIPLAYER</button>
         </div>
         <div class="deck-group">
           <h5>Navigate</h5>
@@ -455,6 +485,9 @@
           ><button data-action="brakes" id="touch-brakes">BRK</button
           ><button data-action="reverse">REV</button
           ><button data-action="camera">CAM</button
+          ><button id="touch-fire" class="combat-only fire" hidden>FIRE</button
+          ><button data-action="missile" class="combat-only fire" hidden>MSL</button
+          ><button data-action="reload" class="combat-only" hidden>RLD</button
           ><button data-action="pause">⏸</button>
         </div>
       </div>
@@ -502,6 +535,6 @@
       </header>
       <div id="panel-body"></div>
     </dialog>
-    <script src="game.js?v=1792476874229"></script>
+    <script src="game.js?v=1792611742236"></script>
   </body>
 </html>
