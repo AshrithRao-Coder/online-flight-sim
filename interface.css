@@ -3492,3 +3492,24 @@ h3 button {
   opacity: 0.4;
   cursor: not-allowed;
 }
+
+#bomb-row {
+  margin-top: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 0;
+}
+#bomb-row[hidden],
+.bomber-only[hidden] {
+  display: none;
+}
+#bomb-options .chip.nuke {
+  border-color: var(--warn);
+}
+#bomb-options .chip.nuke.selected {
+  background: var(--warn);
+  color: #2a0710;
+}
+.menu-option.selected {
+  outline: 2px solid var(--lime);
+}

@@ -222,7 +222,7 @@ export class MultiplayerHub {
       window.amount += dmg;
       c.damageGiven.set(target.id, window);
       target.lastHitBy = { id: c.id, at: now };
-      target.send({ t: 'hit', from: c.id, dmg: Math.round(dmg * 10) / 10 });
+      target.send({ t: 'hit', from: c.id, dmg: Math.round(dmg * 10) / 10, ...(m.why === 'blast' ? { why: 'blast' } : {}) });
       return;
     }
     if (m.t === 'msl' && target) { this.broadcast(c.room, { t: 'msl', from: c.id, target: target.id }, c); return; }

@@ -20,7 +20,7 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..800;1,9..144,400..800&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
     />
-    <link rel="stylesheet" href="interface.css?v=1792650046318" />
+    <link rel="stylesheet" href="interface.css?v=1792688774690" />
   </head>
   <body>
     <main id="landing">
@@ -252,6 +252,10 @@
                     ><button class="chip" data-mode="drone">VS DRONES</button
                     ><button class="chip" data-mode="bandit">VS BANDITS</button>
                   </div>
+                  <div class="cf-chips" id="bomb-row" hidden>
+                    <span class="cf-sublabel">BOMBS</span>
+                    <span id="bomb-options"></span>
+                  </div>
                   <div class="cf-chips" id="difficulty-row" hidden>
                     <span class="cf-sublabel">BANDITS</span>
                     <span id="difficulty-options"
@@ -410,6 +414,7 @@
           <h5>Combat &amp; online</h5>
           <button data-action="targets" class="vs-only" hidden>TARGETS</button
           ><button data-action="reload" class="combat-only" hidden>RELOAD</button
+          ><button data-action="bombbay" class="bomber-only" hidden>BOMB BAY</button
           ><button data-action="multiplayer">MULTIPLAYER</button>
         </div>
         <div class="deck-group">
@@ -535,6 +540,6 @@
       </header>
       <div id="panel-body"></div>
     </dialog>
-    <script src="game.js?v=1792650046318"></script>
+    <script src="game.js?v=1792688774690"></script>
   </body>
 </html>
