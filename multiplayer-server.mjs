@@ -38,9 +38,9 @@ export function validState(d) {
     finite(d[5], -360, 360) && finite(d[6], 0, 1500) && Number.isInteger(d[7]) && d[7] >= 0 && d[7] < 256;
 }
 const validAircraft = (a) => typeof a === 'string' && /^[a-z0-9]{1,12}$/.test(a);
-// Aircraft that can hurt other planes: the fighters' guns and missiles and
-// the B-29's turrets. (The B-1B's and B-2's bombs only hit the ground.)
-export const ARMED = new Set(['f14', 'f15', 'f16', 'su27', 'su33', 'su37', 'b29']);
+// Aircraft that can hurt other planes: the fighters' guns and missiles, and
+// the bombers (the B-29's turrets, and every bomber's bomb blasts).
+export const ARMED = new Set(['f14', 'f15', 'f16', 'su27', 'su33', 'su37', 'b1b', 'b2', 'b29']);
 
 // ── frames ────────────────────────────────────────────────────────────────────
 function frame(opcode, payload = Buffer.alloc(0)) {
@@ -170,7 +170,7 @@ export class MultiplayerHub {
       if (m.create && typeof m.create === 'object') {
         // A new room. One player may make a few an hour.
         if (this.rooms.size >= MAX_ROOMS || c.created >= 5) { c.send({ t: 'error', error: 'No more rooms can be made right now. Join an open one.' }); return; }
-        if (m.create.mode === 'dogfight' && !ARMED.has(m.aircraft)) { c.send({ t: 'error', error: 'Only armed aircraft can make a dogfight room: choose a fighter or the B-29, or make a free-flight room.' }); return; }
+        if (m.create.mode === 'dogfight' && !ARMED.has(m.aircraft)) { c.send({ t: 'error', error: 'Only armed aircraft can make a dogfight room: choose a fighter or a bomber, or make a free-flight room.' }); return; }
         c.created++;
         room = {
           id: this.newCode(),
@@ -222,7 +222,8 @@ export class MultiplayerHub {
       window.amount += dmg;
       c.damageGiven.set(target.id, window);
       target.lastHitBy = { id: c.id, at: now };
-      target.send({ t: 'hit', from: c.id, dmg: Math.round(dmg * 10) / 10, ...(m.why === 'blast' ? { why: 'blast' } : {}) });
+      const blast = m.why === 'blast' ? { why: 'blast', ...(typeof m.weapon === 'string' && /^[A-Z0-9 -]{1,16}$/.test(m.weapon) ? { weapon: m.weapon } : {}) } : {};
+      target.send({ t: 'hit', from: c.id, dmg: Math.round(dmg * 10) / 10, ...blast });
       return;
     }
     if (m.t === 'msl' && target) { this.broadcast(c.room, { t: 'msl', from: c.id, target: target.id }, c); return; }
