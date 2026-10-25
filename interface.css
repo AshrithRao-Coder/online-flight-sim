@@ -3513,3 +3513,18 @@ h3 button {
 .menu-option.selected {
   outline: 2px solid var(--lime);
 }
+
+/* What's new: shown once in the menu after an update. */
+.whats-new-video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  margin: 0 0 14px;
+  border-radius: 8px;
+  background: #000;
+}
+.whats-new {
+  margin: 0 0 14px;
+  padding-left: 20px;
+  line-height: 1.6;
+}

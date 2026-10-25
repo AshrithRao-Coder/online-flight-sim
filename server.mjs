@@ -10,7 +10,7 @@ import {attachMultiplayer} from './multiplayer-server.mjs';
 const root=process.env.ROOT?path.resolve(process.env.ROOT)
   :fs.existsSync(path.resolve('dist/index.html'))?path.resolve('dist')
   :path.dirname(fileURLToPath(import.meta.url));
-const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json; charset=utf-8','.txt':'text/plain; charset=utf-8','.md':'text/markdown; charset=utf-8','.ico':'image/x-icon','.webp':'image/webp','.png':'image/png','.jpg':'image/jpeg','.svg':'image/svg+xml','.glb':'model/gltf-binary','.woff2':'font/woff2'};
+const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json; charset=utf-8','.txt':'text/plain; charset=utf-8','.md':'text/markdown; charset=utf-8','.ico':'image/x-icon','.webp':'image/webp','.png':'image/png','.jpg':'image/jpeg','.svg':'image/svg+xml','.glb':'model/gltf-binary','.mp4':'video/mp4','.woff2':'font/woff2'};
 
 // ADS-B providers reject browser requests (no CORS headers), so the local
 // server relays them. adsb.lol allows roughly one large query every ~10 s,
@@ -141,7 +141,17 @@ function serveFile(req,res,file,stat){
     res.writeHead(200,{...headers,'Content-Encoding':'gzip',Vary:'Accept-Encoding','Content-Length':gz.body.length});
     res.end(req.method==='HEAD'?undefined:gz.body);return;
   }
-  res.writeHead(200,{...headers,'Content-Length':stat.size});
+  // Byte ranges, so a video can stream and seek (Safari needs them to play).
+  const range=/^bytes=(\d*)-(\d*)$/.exec(req.headers.range||'');
+  if(range&&(range[1]||range[2])){
+    let start=range[1]?Number(range[1]):Math.max(0,stat.size-Number(range[2])),end=range[1]&&range[2]?Number(range[2]):stat.size-1;
+    end=Math.min(end,stat.size-1);
+    if(start>end||start>=stat.size){res.writeHead(416,{...headers,'Content-Range':`bytes */${stat.size}`}).end();return;}
+    res.writeHead(206,{...headers,'Accept-Ranges':'bytes','Content-Range':`bytes ${start}-${end}/${stat.size}`,'Content-Length':end-start+1});
+    if(req.method==='HEAD'){res.end();return;}
+    fs.createReadStream(file,{start,end}).on('error',()=>res.destroy()).pipe(res);return;
+  }
+  res.writeHead(200,{...headers,'Accept-Ranges':'bytes','Content-Length':stat.size});
   if(req.method==='HEAD'){res.end();return;}
   fs.createReadStream(file).on('error',()=>res.destroy()).pipe(res);
 }

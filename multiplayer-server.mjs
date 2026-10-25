@@ -38,6 +38,9 @@ export function validState(d) {
     finite(d[5], -360, 360) && finite(d[6], 0, 1500) && Number.isInteger(d[7]) && d[7] >= 0 && d[7] < 256;
 }
 const validAircraft = (a) => typeof a === 'string' && /^[a-z0-9]{1,12}$/.test(a);
+// A position (lat, lon, altitude) and, for a drop, a velocity (m/s).
+const validPoint = (d) => finite(d[0], -90, 90) && finite(d[1], -180, 180) && finite(d[2], -1000, 30000) &&
+  d.slice(3).every((v) => finite(v, -2000, 2000));
 // Aircraft that can hurt other planes: the fighters' guns and missiles, and
 // the bombers (the B-29's turrets, and every bomber's bomb blasts).
 export const ARMED = new Set(['f14', 'f15', 'f16', 'su27', 'su33', 'su37', 'b1b', 'b2', 'b29']);
@@ -226,7 +229,24 @@ export class MultiplayerHub {
       target.send({ t: 'hit', from: c.id, dmg: Math.round(dmg * 10) / 10, ...blast });
       return;
     }
+    if (m.t === 'reacq' && target) { this.broadcast(c.room, { t: 'reacq', from: c.id, target: target.id }, c); return; }
     if (m.t === 'msl' && target) { this.broadcast(c.room, { t: 'msl', from: c.id, target: target.id }, c); return; }
+    // Flares, as fast as a dispenser program runs (0.5 s), no faster.
+    if (m.t === 'flare' && Array.isArray(m.d) && m.d.length === 6 && validPoint(m.d)) {
+      const now = Date.now();
+      if (now - (c.lastFlare || 0) < 400) return;
+      c.lastFlare = now;
+      const fooled = Array.isArray(m.fooled) ? m.fooled.slice(0, 12).map((x) => x === true) : m.fooled === true;
+      this.broadcast(c.room, { t: 'flare', from: c.id, d: m.d, fooled }, c);
+      return;
+    }
+    // Bombs: the drop and the burst, shown to the rest of the room.
+    if ((m.t === 'bomb' || m.t === 'boom') && typeof m.id === 'string' && /^[0-9-]{1,24}$/.test(m.id) &&
+        typeof m.type === 'string' && /^[a-z0-9_]{1,16}$/.test(m.type) && Array.isArray(m.d) &&
+        m.d.length === (m.t === 'bomb' ? 6 : 3) && validPoint(m.d)) {
+      this.broadcast(c.room, { t: m.t, from: c.id, id: m.id, type: m.type, d: m.d, ...(m.t === 'boom' ? { air: !!m.air } : {}) }, c);
+      return;
+    }
     if (m.t === 'down') {
       // Credit whoever hit the victim in the last 15 seconds.
       const hit = c.lastHitBy && Date.now() - c.lastHitBy.at < 15000 ? c.lastHitBy : null,
