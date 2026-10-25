@@ -229,6 +229,15 @@ export class MultiplayerHub {
       target.send({ t: 'hit', from: c.id, dmg: Math.round(dmg * 10) / 10, ...blast });
       return;
     }
+    // A missile's flight, from the game that fired it (ten updates a second
+    // per missile; a few missiles at once at most).
+    if (m.t === 'mst' && typeof m.id === 'string' && /^[0-9]{1,9}$/.test(m.id) && Array.isArray(m.d) && m.d.length === 6 && validPoint(m.d) && [0, 1, 2, 3].includes(m.s)) {
+      const now = Date.now();
+      if (!c.mstWindow || now - c.mstWindow.since > 1000) c.mstWindow = { since: now, n: 0 };
+      if (++c.mstWindow.n > 80) return;
+      this.broadcast(c.room, { t: 'mst', from: c.id, id: m.id, d: m.d, s: m.s, ...(target ? { target: target.id } : {}), ...(m.boom === true ? { boom: true } : {}) }, c);
+      return;
+    }
     if (m.t === 'mlost' && target) { this.broadcast(c.room, { t: 'mlost', from: c.id, target: target.id, own: m.own === true }, c); return; }
     if (m.t === 'reacq' && target) { this.broadcast(c.room, { t: 'reacq', from: c.id, target: target.id }, c); return; }
     if (m.t === 'msl' && target) { this.broadcast(c.room, { t: 'msl', from: c.id, target: target.id }, c); return; }
@@ -237,7 +246,7 @@ export class MultiplayerHub {
       const now = Date.now();
       if (now - (c.lastFlare || 0) < 400) return;
       c.lastFlare = now;
-      const fooled = Array.isArray(m.fooled) ? m.fooled.slice(0, 12).map((x) => x === true) : m.fooled === true;
+      const fooled = Array.isArray(m.fooled) ? m.fooled.slice(0, 12).filter((x) => typeof x === 'string' && /^[0-9]{1,9}$/.test(x)) : [];
       this.broadcast(c.room, { t: 'flare', from: c.id, d: m.d, fooled }, c);
       return;
     }
