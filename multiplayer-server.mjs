@@ -231,7 +231,7 @@ export class MultiplayerHub {
     }
     // A missile's flight, from the game that fired it (ten updates a second
     // per missile; a few missiles at once at most).
-    if (m.t === 'mst' && typeof m.id === 'string' && /^[0-9]{1,9}$/.test(m.id) && Array.isArray(m.d) && m.d.length === 6 && validPoint(m.d) && [0, 1, 2, 3].includes(m.s)) {
+    if (m.t === 'mst' && typeof m.id === 'string' && /^[0-9]{1,9}$/.test(m.id) && Array.isArray(m.d) && m.d.length === 6 && validPoint(m.d) && [0, 1, 2, 3, 4].includes(m.s)) {
       const now = Date.now();
       if (!c.mstWindow || now - c.mstWindow.since > 1000) c.mstWindow = { since: now, n: 0 };
       if (++c.mstWindow.n > 80) return;
