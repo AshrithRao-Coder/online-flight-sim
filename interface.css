@@ -2944,7 +2944,58 @@ h3 button {
     overflow: auto;
   }
 }
-@media (pointer: fine) {
+/* Any touchscreen (iPads and big tablets too, not only phone-sized
+   screens) gets the thumb controls; a mouse-only computer never does. */
+@media (any-pointer: coarse) {
+  .touch-controls {
+    display: flex;
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: 230px;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+    pointer-events: none;
+  }
+  .touch-controls label {
+    order: 3;
+  }
+  .touch-buttons {
+    margin: 0 auto;
+  }
+}
+/* Tablets (iPad landscape): the joystick right of the instrument panel, the
+   throttle on the right, the buttons in two rows under the aircraft, all
+   finger-sized; nothing over the middle of the view. */
+@media (any-pointer: coarse) and (min-width: 851px) {
+  .touch-controls {
+    left: 284px;
+    right: 14px;
+    bottom: 226px;
+  }
+  .joystick {
+    width: 132px;
+    height: 132px;
+  }
+  .joystick div {
+    width: 52px;
+    height: 52px;
+  }
+  .touch-controls input {
+    height: 132px;
+    width: 36px;
+  }
+  .touch-buttons {
+    grid-template-columns: repeat(6, 58px);
+    gap: 6px;
+  }
+  .touch-buttons button {
+    padding: 15px 0;
+    font-size: 11px;
+  }
+}
+@media not all and (any-pointer: coarse) {
   .touch-controls {
     display: none;
   }
