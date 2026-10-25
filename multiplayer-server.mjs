@@ -229,6 +229,7 @@ export class MultiplayerHub {
       target.send({ t: 'hit', from: c.id, dmg: Math.round(dmg * 10) / 10, ...blast });
       return;
     }
+    if (m.t === 'mlost' && target) { this.broadcast(c.room, { t: 'mlost', from: c.id, target: target.id, own: m.own === true }, c); return; }
     if (m.t === 'reacq' && target) { this.broadcast(c.room, { t: 'reacq', from: c.id, target: target.id }, c); return; }
     if (m.t === 'msl' && target) { this.broadcast(c.room, { t: 'msl', from: c.id, target: target.id }, c); return; }
     // Flares, as fast as a dispenser program runs (0.5 s), no faster.
