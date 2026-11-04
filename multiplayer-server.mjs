@@ -9,6 +9,9 @@
 // victim announces its own destruction and the server credits whoever hit it
 // last.
 import crypto from 'node:crypto';
+import {AccessControl} from './access-control.mjs';
+import {rank} from './access-policy.js';
+import {executeServerCommand} from './room-commands.mjs';
 
 const MAX_PLAYERS = 150, MAX_ROOM = 24, MAX_ROOMS = 200, MAX_MESSAGE = 2048;
 // Per player: messages a second on average, and the burst allowed.
@@ -126,7 +129,10 @@ class Client {
 }
 
 export class MultiplayerHub {
-  constructor() {
+  constructor({access=new AccessControl()}={}) {
+    this.access=access;
+    this.started=Date.now();this.lobbyLocked=false;this.isArmed=id=>ARMED.has(id);
+    this.kicks=new Map();this.mutes=new Map();
     this.nextId = 1;
     this.clients = new Set();
     // id -> { id, name, mode, private, permanent, empty (time it emptied) }
@@ -165,9 +171,57 @@ export class MultiplayerHub {
       if (!this.rooms.has(code)) return code;
     }
   }
+  moderate(c,m) {
+        const powers={kick:'kick',mute:'mute',ban:'ban',closeRoom:'closeRoom'},power=powers[m.action];
+        if(!power)throw Error('Unknown moderation action.');
+        const actor=this.access.require(c.authToken,power);
+        if(!c.room)throw Error('Join a room first.');
+        if(m.action==='closeRoom'){
+          const members=this.members(c.room);
+          if(members.some(p=>p!==c&&rank(this.access.role(p.authToken))>=rank(actor.role)))throw Error('A peer or higher role is in this room.');
+          const id=c.room;for(const p of members){this.exit(p);p.send({t:'closed',error:'Room closed by '+actor.role});}this.rooms.delete(id);
+        }else{
+          const target=this.members(c.room).find(p=>p.id===m.target);
+          if(!target||target===c||rank(this.access.role(target.authToken))>=rank(actor.role))throw Error('You can only moderate lower roles in your room.');
+          if(m.action==='mute'){target.mutedUntil=Date.now()+10*60000;if(target.authToken)this.mutes.set(target.authToken,target.mutedUntil);target.send({t:'notice',text:'Room chat muted for 10 minutes.'});}
+          else {
+            if(m.action==='ban'){
+              const targetRole=this.access.role(target.authToken),session=this.access.sessions.get(target.authToken);if(!session)throw Error('Session ban needs a signed-in player.');
+              session.bannedUntil=Date.now()+3600000;session.banRole=targetRole;session.banByRole=actor.role;session.banName=target.name;session.banId='B'+crypto.randomBytes(3).toString('hex').toUpperCase();
+            }
+            this.exit(target);target.send({t:'kicked',error:m.action==='ban'?'Your session is banned for one hour.':'Removed from the room by a moderator.'});
+            target.kickedUntil=Date.now()+5*60000;
+            if(target.authToken)this.kicks.set(target.authToken,target.kickedUntil);
+          }
+        }
+    return "Moderation action completed.";
+  }
   message(c, m) {
+    if(m.t==='auth') {
+      if(!this.access.session(m.token)){c.authToken=null;c.authDenied=true;c.send({t:'auth-required',requestId:m.requestId,error:'Your session expired. Enter your access code again to reconnect.'});return;}
+      c.authDenied=false;c.authToken=m.token;c.authRequestId=m.requestId;c.send({t:'access',role:this.access.role(m.token),requestId:m.requestId});return;
+    }
+    if(c.authToken&&!this.access.session(c.authToken)){c.authToken=null;c.authDenied=true;this.exit(c);c.send({t:'auth-required',requestId:c.authRequestId,error:'Your session expired. Enter your access code again to reconnect.'});return;}
+    if(m.t==='command'){
+      try{c.send({t:'command-result',id:m.id,ok:true,text:executeServerCommand(this,c,m.name,m.args)});}
+      catch(e){c.send({t:'command-result',id:m.id,ok:false,text:e.message});}return;
+    }
+    if(m.t==='moderate') {
+      try{c.send({t:'notice',text:this.moderate(c,m)});}catch(e){c.send({t:'error',error:e.message});}return;
+    }
+    if(m.t==='chat') {
+      if(!c.room)return;
+      if(c.mutedUntil>Date.now()||this.mutes.get(c.authToken)>Date.now()){c.send({t:'error',error:'Your room chat is muted.'});return;}
+      const chatDelay=rank(this.access.role(c.authToken))>=rank('moderator')?1000:(this.rooms.get(c.room)?.chatDelay||1000);
+      if(Date.now()-(c.lastChat||0)<chatDelay){c.send({t:'error',error:'Please wait before sending another chat message.'});return;}
+      const text=String(m.text||'').replace(/[\x00-\x1f\x7f]/g,' ').trim().slice(0,240);
+      if(text){c.lastChat=Date.now();this.broadcast(c.room,{t:'chat',id:c.id,name:c.name,text});}return;
+    }
     if (m.t === 'rooms') { c.send({ t: 'rooms', list: this.list() }); return; }
     if (m.t === 'hello') {
+      if(c.authDenied){c.send({t:'error',error:'Authenticate with a valid access session before joining.'});return;}
+      if(this.lobbyLocked&&this.access.role(c.authToken)!=='admin'){c.send({t:'error',error:'Lobby joining is locked by Admin.'});return;}
+      if(c.kickedUntil>Date.now()||this.kicks.get(c.authToken)>Date.now()){c.send({t:'error',error:'Wait five minutes before rejoining after a kick.'});return;}
       if (c.room) return;
       let room;
       if (m.create && typeof m.create === 'object') {
@@ -187,6 +241,7 @@ export class MultiplayerHub {
         room = this.rooms.get(String(m.room ?? '').toUpperCase().trim());
         if (!room) { c.send({ t: 'error', error: 'There is no room with that code. Check it and try again.' }); return; }
       }
+      if(room.locked&&rank(this.access.role(c.authToken))<(room.lockRank??rank('manager'))){c.send({t:'error',error:'This room is locked.'});return;}
       if (this.members(room.id).length >= MAX_ROOM) { c.send({ t: 'error', error: 'That room is full. Try another.' }); return; }
       c.room = room.id;
       room.empty = null;
@@ -296,6 +351,7 @@ export class MultiplayerHub {
   }
   tick() {
     const now = Date.now();
+    for(const map of [this.kicks,this.mutes])for(const [key,until]of map)if(until<=now)map.delete(key);
     for (const c of this.clients) if (now - c.lastSeen > 45000) { c.socket.destroy(); this.leave(c); }
     // A made room closes two minutes after its last pilot leaves.
     for (const [id, r] of this.rooms) if (r.empty && now - r.empty > 120000) this.rooms.delete(id);
@@ -317,8 +373,8 @@ export class MultiplayerHub {
 }
 
 // Adds /api/mp to an http.Server.
-export function attachMultiplayer(server) {
-  const hub = new MultiplayerHub();
+export function attachMultiplayer(server,options={}) {
+  const hub = new MultiplayerHub(options);
   server.on('upgrade', (req, socket) => {
     if (new URL(req.url, 'http://localhost').pathname !== '/api/mp') return socket.destroy();
     socket.on('error', () => socket.destroy());

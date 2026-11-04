@@ -3527,6 +3527,19 @@ body:not(.touch-on) .touch-controls {
 #mp-warning[hidden] {
   display: none;
 }
+/* Popovers escape the modal's clipping and paint above its backdrop. */
+#toast[popover], #mp-warning[popover] {
+  position: fixed;
+  inset: auto;
+  top: 60px;
+  left: 50%;
+  margin: 0;
+  width: max-content;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
+  z-index: 2147483647;
+}
+#mp-warning[popover] { top: 140px; }
 .room-warn {
   color: var(--warn);
   font-size: 10px;

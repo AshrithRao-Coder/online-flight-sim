@@ -4,6 +4,7 @@ import path from 'node:path';
 import zlib from 'node:zlib';
 import {fileURLToPath} from 'node:url';
 import {attachMultiplayer} from './multiplayer-server.mjs';
+import {AccessControl} from './access-control.mjs';
 // The game files: ROOT if set; dist/ when run from the project (npm run dev);
 // otherwise this file's own folder - the published site, where the build
 // copies this server in as server.mjs (for hosts such as Render).
@@ -159,8 +160,10 @@ function serveFile(req,res,file,stat){
 // Local by default. A hosting platform sets PORT: then listen publicly.
 // HOST overrides either way.
 const PORT=Number(process.env.PORT)||4173,HOST=process.env.HOST||(process.env.PORT?'0.0.0.0':'127.0.0.1');
+const access=new AccessControl({file:process.env.OFS_ACCESS_FILE||path.resolve('.ofs-access-codes.json')});
 const server=http.createServer((req,res)=>{
   const url=new URL(req.url,'http://localhost');
+  if(url.pathname.startsWith('/api/access/')){access.handle(req,res,url);return;}
   if(url.pathname==='/api/traffic'){traffic(url,res);return;}
   if(url.pathname==='/api/traffic/world'){worldTraffic(req,res);return;}
   if(url.pathname==='/api/traffic/status'){send(res,JSON.stringify({providers:lastAnswer,resting:Object.fromEntries([...resting].map(([h,t])=>[h,new Date(t).toISOString()]))}));return;}
@@ -170,12 +173,12 @@ const server=http.createServer((req,res)=>{
   if(!file.startsWith(root+path.sep)&&file!==root){res.writeHead(403).end();return;}
   // Never serve dot-files and folders (.git) or the server itself.
   const rel=path.relative(root,file);
-  if(rel.split(path.sep).some((part)=>part.startsWith('.'))||rel==='server.mjs'||rel==='multiplayer-server.mjs'){res.writeHead(404).end('Not found');return;}
+  if(rel.split(path.sep).some((part)=>part.startsWith('.'))||['server.mjs','multiplayer-server.mjs','access-control.mjs','room-commands.mjs','ACCESS_CODES.local.txt'].includes(rel)){res.writeHead(404).end('Not found');return;}
   let stat=fs.statSync(file,{throwIfNoEntry:false});
   if(stat?.isDirectory()){file=path.join(file,'index.html');stat=fs.statSync(file,{throwIfNoEntry:false});}
   if(!stat?.isFile()){res.writeHead(404).end('Not found');return;}
   serveFile(req,res,file,stat);
 });
 // Multiplayer relay on /api/mp (WebSocket).
-attachMultiplayer(server);
+attachMultiplayer(server,{access});
 server.listen(PORT,HOST,()=>console.log(`Online Flight Sim: http://${HOST==='0.0.0.0'?'localhost':HOST}:${PORT}`));
