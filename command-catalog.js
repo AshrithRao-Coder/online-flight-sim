@@ -2,16 +2,18 @@
 export const COMMANDS = [
   {
     name: "help",
+    optionalArgs: true,
     role: "player",
     scope: "local",
-    args: "[{Command name}]",
+    args: "{Command name (optional)}",
     description: "List your commands or show one example",
   },
   {
     name: "refuel",
+    optionalArgs: true,
     role: "pilot",
     scope: "flight",
-    args: "[{Fuel percentage 0-100}]",
+    args: "{Fuel percentage 0-100 (optional)}",
     description: "Refill fuel, optionally to a percentage",
   },
   {
@@ -27,13 +29,6 @@ export const COMMANDS = [
     scope: "local",
     args: "",
     description: "List saved flight bookmarks",
-  },
-  {
-    name: "repair",
-    role: "vip",
-    scope: "flight",
-    args: "",
-    description: "Repair engine and landing-gear failures",
   },
   {
     name: "rearm",
@@ -61,34 +56,36 @@ export const COMMANDS = [
     role: "vip",
     scope: "flight",
     args: "{Airspeed in knots}",
-    description: "Set airspeed in knots",
+    description: "Instantly set the indicated airspeed in knots",
   },
   {
     name: "boost",
+    optionalArgs: true,
     role: "vip",
     scope: "flight",
-    args: "",
-    description: "Add 25 percent airspeed within the aircraft limit",
+    args: "{Airspeed in knots (optional)}",
+    description: "Instantly set airspeed, or add 25 percent if omitted",
   },
   {
-    name: "calm",
+    name: "weatherpresets",
     role: "vip",
     scope: "flight",
-    args: "",
-    description: "Clear weather, wind and turbulence",
+    args: "{Weather presets}",
+    description:
+      "Weather, turbulence and crosswind: clear, few, scattered, overcast, rain, storm, breezy, crosswind, gusty, severe, hurricane or hurricane-extreme",
   },
   {
-    name: "recover",
+    name: "repair",
     role: "instructor",
     scope: "flight",
     args: "",
-    description: "Recover your aircraft to safe flight",
+    description: "Restore only your aircraft hull to 100% in dogfight mode",
   },
   {
     name: "teleport",
     role: "instructor",
     scope: "flight",
-    args: "{Latitude} {Longitude} [{Altitude in feet}]",
+    args: "{Latitude} {Longitude} {Altitude in feet (optional)}",
     description: "Move to latitude, longitude and optional altitude in feet",
   },
   {
@@ -109,14 +106,14 @@ export const COMMANDS = [
     name: "practice",
     role: "instructor",
     scope: "flight",
-    args: "{Practice type: stall|engineout|approach|recovery}",
+    args: "{Practice type: stall or engineout or approach or recovery}",
     description: "Set up stall, engineout, approach or recovery practice",
   },
   {
     name: "spawn",
     role: "instructor",
     scope: "flight",
-    args: "{Target type: drone|bandit|ground} {Count 1-8}",
+    args: "{Target type: drone or bandit or ground} {Count 1-8}",
     description: "Spawn 1 to 8 drone, bandit or ground targets in solo combat",
   },
   {
@@ -242,7 +239,7 @@ export const COMMANDS = [
     name: "roommode",
     role: "manager",
     scope: "server",
-    args: "{Room mode: free|dogfight}",
+    args: "{Room mode: free or dogfight}",
     description: "Switch your room to free or dogfight",
   },
   {
@@ -291,14 +288,14 @@ export const COMMANDS = [
     name: "unlimited-fuel",
     role: "admin",
     scope: "flight",
-    args: "{on|off}",
+    args: "{on or off}",
     description: "Keep your own fuel full until disabled",
   },
   {
     name: "noclip",
     role: "admin",
     scope: "flight",
-    args: "{on|off}",
+    args: "{on or off}",
     description: "Disable scenery collisions for your own flight",
   },
   {
@@ -314,6 +311,14 @@ export const COMMANDS = [
     scope: "server",
     args: "{Room code}",
     description: "Enter a private or locked room as Admin to moderate it",
+  },
+  {
+    name: "repairall",
+    role: "admin",
+    scope: "server",
+    args: "",
+    description:
+      "Restore every other aircraft hull to 100% in your dogfight room",
   },
 ];
 export const commandByName = (name) => COMMANDS.find((c) => c.name === name);

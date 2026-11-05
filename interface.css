@@ -3584,3 +3584,11 @@ body:not(.touch-on) .touch-controls {
   padding-left: 20px;
   line-height: 1.6;
 }
+
+#fuel-hud{display:flex;align-items:center;gap:9px;padding:8px 11px;background:#101b29ed;border:1px solid #7b9398;border-radius:7px;color:#edf4ec;font:700 12px system-ui}#fuel-hud.low{color:#ffd36b}#fuel-hud.empty{color:#ff9898}#fuel-bar{width:95px;height:14px;accent-color:#caff70}#fuel-hud.low #fuel-bar{accent-color:#ffd36b}#fuel-hud.empty #fuel-bar{accent-color:#ff9898}
+
+#hull-hud{display:flex;align-items:center;gap:9px;padding:8px 11px;background:#101b29ed;border:1px solid #7b9398;border-radius:7px;color:#caffb2;font:700 12px system-ui}#hull-hud.damaged{color:#ffb282}#hull-bar{width:85px;height:14px;accent-color:#caffb2}#hull-hud.damaged #hull-bar{accent-color:#ff985e}
+
+.hud-corner{right:16px}#quick-flight-tools{margin-left:auto}
+
+#hull-hud[hidden]{display:none!important}

@@ -87,6 +87,14 @@ export function executeServerCommand(hub, c, name, args, profile = {}) {
   }
   const room = hub.rooms.get(c.room);
   if (!c.room || !room) throw Error("Join a room first.");
+  if (name === "repairall") {
+    if (room.mode !== "dogfight")
+      throw Error("Join a dogfight room to repair other aircraft.");
+    const others = hub.members(c.room).filter((p) => p !== c);
+    if (!others.length) throw Error("No other aircraft in this room.");
+    for (const pilot of others) pilot.send({ t: "repair-hull", by: c.name });
+    return "Restored " + others.length + " other aircraft hulls to 100%.";
+  }
   const members = hub.members(c.room),
     guardRoom = () => {
       if (
