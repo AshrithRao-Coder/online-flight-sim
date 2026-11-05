@@ -8,7 +8,7 @@ const text = (args) => {
   if (!s || s.length > 240) throw Error("Enter 1 to 240 characters.");
   return s;
 };
-export function executeServerCommand(hub, c, name, args) {
+export function executeServerCommand(hub, c, name, args, profile = {}) {
   const command = commandByName(name),
     actor = hub.access.session(c.authToken);
   if (!command || command.scope !== "server")
@@ -24,6 +24,27 @@ export function executeServerCommand(hub, c, name, args) {
   const all = (message) => {
     for (const p of hub.clients) p.send(message);
   };
+  if (name === "serverrooms") {
+    const rooms = [...hub.rooms.values()].map((r) => ({
+      id: r.id,
+      name: r.name,
+      private: !!r.private,
+      locked: !!r.locked,
+      mode: r.mode,
+      pilots: hub.members(r.id).length,
+    }));
+    return {
+      text:
+        rooms
+          .map(
+            (r) =>
+              `${r.id}: ${r.private ? "PRIVATE" : "PUBLIC"} ${r.name} (${r.pilots} pilots${r.locked ? ", locked" : ""})`,
+          )
+          .join("\n") || "No rooms yet.",
+      data: { rooms },
+    };
+  }
+  if (name === "enter-room") return hub.enterRoomAsAdmin(c, args[0], profile);
   if (name === "serverstats")
     return `Uptime ${Math.floor((Date.now() - hub.started) / 1000)}s · ${hub.clients.size} pilots · ${hub.rooms.size} rooms · ${hub.access.sessions.size} sessions · lobby ${hub.lobbyLocked ? "locked" : "open"}`;
   if (name === "broadcast") {
