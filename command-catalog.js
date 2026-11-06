@@ -1,6 +1,14 @@
 // Useful actions only; ordinary cockpit, camera and settings controls stay in their normal UI.
 export const COMMANDS = [
   {
+    name: "mode",
+    role: "vip",
+    scope: "flight",
+    args: "{Solo mode: free or guns or drone or bandit or dogfight}",
+    description:
+      "Switch your current solo game without restarting; dogfight means AI bandits",
+  },
+  {
     name: "help",
     optionalArgs: true,
     role: "player",
