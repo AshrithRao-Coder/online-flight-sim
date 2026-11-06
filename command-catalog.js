@@ -78,9 +78,8 @@ export const COMMANDS = [
     name: "mode",
     role: "vip",
     scope: "flight",
-    args: "{Solo mode: free or guns or drone or bandit or dogfight}",
-    description:
-      "Switch your current solo game without restarting; dogfight means AI bandits",
+    args: "{Solo mode: free or guns or drone or bandit}",
+    description: "Switch your current solo game without restarting",
   },
   {
     name: "repair",
