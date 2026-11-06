@@ -1,3 +1,7 @@
+import {
+  AccountRegistry,
+  verifyFirebaseIdentity,
+} from "./firebase-accounts.mjs";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import {
@@ -9,8 +13,15 @@ import {
 } from "./access-policy.js";
 
 export class AccessControl {
-  constructor({ file = null, codes = DEFAULT_CODES } = {}) {
+  constructor({
+    file = null,
+    codes = DEFAULT_CODES,
+    accountsFile = null,
+    verifyIdentity = verifyFirebaseIdentity,
+  } = {}) {
     this.file = file;
+    this.accounts = new AccountRegistry({ file: accountsFile });
+    this.verifyIdentity = verifyIdentity;
     this.codes = structuredClone(codes);
     this.sessions = new Map();
     this.attempts = new Map();
@@ -37,7 +48,7 @@ export class AccessControl {
       fs.renameSync(tmp, this.file);
     }
   }
-  login(code, ip = "local") {
+  checkRate(ip) {
     const now = Date.now(),
       bucket = this.attempts.get(ip) || { at: now, n: 0 };
     if (now - bucket.at > 60000) {
@@ -49,6 +60,10 @@ export class AccessControl {
     if (this.attempts.size > 2000)
       for (const [key, b] of this.attempts)
         if (now - b.at > 60000) this.attempts.delete(key);
+  }
+  login(code, ip = "local") {
+    this.checkRate(ip);
+    const now = Date.now();
     if (typeof code !== "string" || code.length > 160)
       throw Error("Wrong or disabled code.");
     const hash = crypto
@@ -73,8 +88,96 @@ export class AccessControl {
   session(token) {
     const s = this.sessions.get(token);
     if (!s || s.expires < Date.now() || s.bannedUntil > Date.now()) return null;
-    const code = this.codes.find((e) => e.id === s.codeId && e.enabled);
-    return code ? { ...s, role: code.role } : null;
+    const account = s.uid ? this.accounts.users.get(s.uid) : null;
+    if (
+      s.uid &&
+      (!account || !account.emailVerified || account.bannedUntil > Date.now())
+    )
+      return null;
+    const code = this.codes.find(
+      (e) => e.id === (account?.codeId ?? s.codeId) && e.enabled,
+    );
+    if (!code) return null;
+    return {
+      ...s,
+      role: code?.role || "player",
+      ...(account
+        ? {
+            account: {
+              uid: account.uid,
+              email: account.email,
+              displayName: account.pilotName || account.displayName,
+              pilotName: account.pilotName || account.displayName,
+              emailVerified: account.emailVerified,
+            },
+          }
+        : {}),
+    };
+  }
+  async loginFirebase(
+    idToken,
+    { code, previousToken, linkCurrent = false, ip = "local" } = {},
+  ) {
+    this.checkRate(ip);
+    const identity = await this.verifyIdentity(idToken);
+    if (!identity.emailVerified || !identity.email)
+      throw Error("Verify your email before choosing a rank code.");
+    if (this.accounts.users.get(identity.uid)?.bannedUntil > Date.now())
+      throw Error("This account is temporarily banned.");
+    let codeId;
+    if (code !== undefined) {
+      if (typeof code !== "string" || code.length > 160)
+        throw Error("Wrong or disabled code.");
+      const hash = crypto
+        .createHash("sha256")
+        .update(normaliseCode(code))
+        .digest("hex");
+      const entry = this.codes.find((e) => e.enabled && e.hash === hash);
+      if (!entry) throw Error("Wrong or disabled code.");
+      codeId = entry.id;
+    } else {
+      const current = this.session(previousToken);
+      if (current?.uid === identity.uid) codeId = current.codeId;
+      else {
+        const account = this.accounts.upsert(identity);
+        return {
+          needsCode: true,
+          role: null,
+          account: {
+            uid: account.uid,
+            email: account.email,
+            displayName: account.pilotName || account.displayName,
+            pilotName: account.pilotName || account.displayName,
+            emailVerified: true,
+          },
+        };
+      }
+    }
+    for (const [token, entry] of this.sessions)
+      if (entry.expires < Date.now()) this.sessions.delete(token);
+    if (this.sessions.size >= 5000)
+      throw Error("Server session limit reached.");
+    this.accounts.upsert(identity, codeId);
+    const token = crypto.randomBytes(32).toString("hex");
+    const account = this.accounts.users.get(identity.uid);
+    this.sessions.set(token, {
+      uid: identity.uid,
+      codeId: account.codeId,
+      expires: identity.expires,
+    });
+    const session = this.session(token);
+    if (previousToken) this.sessions.delete(previousToken);
+    return {
+      token,
+      role: session.role,
+      permissions: permissions(session.role),
+      account: session.account,
+    };
+  }
+
+  identityKey(token) {
+    const uid = this.sessions.get(token)?.uid;
+    return uid ? "firebase:" + uid : token;
   }
   role(token) {
     return this.session(token)?.role || "player";
@@ -149,34 +252,68 @@ export class AccessControl {
     }
     try {
       if (req.method === "GET" && path === "status")
-        return send(200, { enabled: true });
+        return send(200, { enabled: true, firebase: true });
       if (req.method === "GET" && path === "session") {
         const s = this.session(token);
-        if (!s)
+        if (!s?.account?.emailVerified)
           return send(401, {
             error: "Session expired. Enter your code again.",
           });
-        return send(200, { role: s.role, permissions: permissions(s.role) });
+        return send(200, {
+          role: s.role,
+          permissions: permissions(s.role),
+          ...(s.account ? { account: s.account } : {}),
+        });
       }
       if (req.method !== "POST")
         return send(405, { error: "Method not allowed." });
       let raw = "";
       for await (const chunk of req) {
         raw += chunk;
-        if (raw.length > 4096)
+        if (raw.length > 20000)
           return send(413, { error: "Request too large." });
       }
       const body = JSON.parse(raw || "{}");
+      if (path === "firebase") {
+        return send(
+          200,
+          await this.loginFirebase(body.idToken, {
+            code: body.code,
+            previousToken: token,
+            linkCurrent: body.linkCurrent === true,
+            ip: req.socket.remoteAddress,
+          }),
+        );
+      }
+      if (path === "profile") {
+        const current = this.require(token, "play");
+        if (!current.uid) throw Error("Sign in first.");
+        const account = this.accounts.rename(current.uid, body.pilotName);
+        return send(200, {
+          account: {
+            uid: account.uid,
+            email: account.email,
+            displayName: account.pilotName,
+            pilotName: account.pilotName,
+            emailVerified: true,
+          },
+        });
+      }
       if (path === "login") {
-        const result = this.login(body.code, req.socket.remoteAddress);
-        if (token) this.sessions.delete(token);
-        return send(200, result);
+        return send(403, {
+          error:
+            "Sign in and verify your email first. Codes are redeemed after verification.",
+        });
       }
       if (path === "logout") {
         this.sessions.delete(token);
         return send(200, { ok: true });
       }
-      if (path === "codes") return send(200, this.manage(token, body));
+      if (path === "codes") {
+        if (!this.session(token)?.account?.emailVerified)
+          throw Error("Sign in and verify your email first.");
+        return send(200, this.manage(token, body));
+      }
       return send(404, { error: "Not found." });
     } catch (e) {
       return send(e instanceof SyntaxError ? 400 : 403, { error: e.message });

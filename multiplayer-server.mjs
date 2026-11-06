@@ -224,6 +224,7 @@ class Client {
   get info() {
     return {
       id: this.id,
+      accountId: this.accountId,
       name: this.name,
       aircraft: this.aircraft,
       kills: this.kills,
@@ -233,8 +234,9 @@ class Client {
 }
 
 export class MultiplayerHub {
-  constructor({ access = new AccessControl() } = {}) {
+  constructor({ access = new AccessControl(), requireAccounts = true } = {}) {
     this.access = access;
+    this.requireAccounts = requireAccounts;
     this.started = Date.now();
     this.lobbyLocked = false;
     this.isArmed = (id) => ARMED.has(id);
@@ -325,7 +327,12 @@ export class MultiplayerHub {
       }
       this.rooms.delete(id);
     } else {
-      const target = this.members(c.room).find((p) => p.id === m.target);
+      const target = this.members(c.room).find((p) =>
+        this.requireAccounts
+          ? this.access.session(p.authToken)?.uid === m.target
+          : p.id === m.target ||
+            this.access.session(p.authToken)?.uid === m.target,
+      );
       if (
         !target ||
         target === c ||
@@ -336,6 +343,11 @@ export class MultiplayerHub {
         target.mutedUntil = Date.now() + 10 * 60000;
         if (target.authToken)
           this.mutes.set(target.authToken, target.mutedUntil);
+        if (target.authToken)
+          this.mutes.set(
+            this.access.identityKey(target.authToken),
+            target.mutedUntil,
+          );
         target.send({ t: "notice", text: "Room chat muted for 10 minutes." });
       } else {
         if (m.action === "ban") {
@@ -348,7 +360,31 @@ export class MultiplayerHub {
           session.banName = target.name;
           session.banId =
             "B" + crypto.randomBytes(3).toString("hex").toUpperCase();
+          if (session.uid)
+            this.access.accounts.ban(session.uid, {
+              bannedUntil: session.bannedUntil,
+              banRole: session.banRole,
+              banByRole: session.banByRole,
+              banName: session.banName,
+              banId: session.banId,
+            });
         }
+        const targetAccount = this.access.sessions.get(target.authToken)?.uid;
+        const sameAccount =
+          this.requireAccounts && targetAccount
+            ? [...this.clients].filter(
+                (p) =>
+                  this.access.sessions.get(p.authToken)?.uid === targetAccount,
+              )
+            : [target];
+        for (const peer of sameAccount)
+          if (peer !== target) {
+            this.exit(peer);
+            peer.send({
+              t: "kicked",
+              error: "This account was removed from the room.",
+            });
+          }
         this.exit(target);
         target.send({
           t: "kicked",
@@ -360,6 +396,11 @@ export class MultiplayerHub {
         target.kickedUntil = Date.now() + 5 * 60000;
         if (target.authToken)
           this.kicks.set(target.authToken, target.kickedUntil);
+        if (target.authToken)
+          this.kicks.set(
+            this.access.identityKey(target.authToken),
+            target.kickedUntil,
+          );
       }
     }
     return "Moderation action completed.";
@@ -378,13 +419,18 @@ export class MultiplayerHub {
     this.exit(c);
     c.room = room.id;
     room.empty = null;
-    c.name = cleanName(c.name || profile?.name, "ADMIN " + c.id);
+    c.accountId = this.access.session(c.authToken)?.uid;
+    const adminAccount = this.access.session(c.authToken)?.account;
+    c.name = adminAccount
+      ? adminAccount.pilotName || adminAccount.displayName
+      : cleanName(c.name || profile?.name, "ADMIN " + c.id);
     if (validAircraft(profile?.aircraft)) c.aircraft = profile.aircraft;
     c.state = null;
     c.kills = c.deaths = 0;
     c.send({
       t: "welcome",
       id: c.id,
+      accountId: c.accountId,
       name: c.name,
       room: {
         id: room.id,
@@ -410,7 +456,11 @@ export class MultiplayerHub {
   }
   message(c, m) {
     if (m.t === "auth") {
-      if (!this.access.session(m.token)) {
+      if (
+        !this.access.session(m.token) ||
+        (this.requireAccounts &&
+          !this.access.session(m.token)?.account?.emailVerified)
+      ) {
         c.authToken = null;
         c.authDenied = true;
         c.send({
@@ -423,6 +473,9 @@ export class MultiplayerHub {
       }
       c.authDenied = false;
       c.authToken = m.token;
+      c.accountId = this.access.session(m.token)?.uid;
+      const profile = this.access.session(m.token)?.account;
+      if (profile) c.name = profile.pilotName || profile.displayName;
       c.authRequestId = m.requestId;
       c.send({
         t: "access",
@@ -431,7 +484,11 @@ export class MultiplayerHub {
       });
       return;
     }
-    if (c.authToken && !this.access.session(c.authToken)) {
+    if (
+      (this.requireAccounts &&
+        !this.access.session(c.authToken)?.account?.emailVerified) ||
+      (c.authToken && !this.access.session(c.authToken))
+    ) {
       c.authToken = null;
       c.authDenied = true;
       this.exit(c);
@@ -442,6 +499,19 @@ export class MultiplayerHub {
           "Your session expired. Enter your access code again to reconnect.",
       });
       return;
+    }
+    if (this.requireAccounts && c.accountId) {
+      const account = this.access.accounts.users.get(c.accountId);
+      const name = account?.pilotName || account?.displayName;
+      if (name && c.name !== name) {
+        c.name = name;
+        if (c.room)
+          this.broadcast(c.room, {
+            t: "profile",
+            accountId: c.accountId,
+            name,
+          });
+      }
     }
     if (m.t === "command") {
       try {
@@ -470,7 +540,8 @@ export class MultiplayerHub {
       if (!c.room) return;
       if (
         c.mutedUntil > Date.now() ||
-        this.mutes.get(c.authToken) > Date.now()
+        (this.mutes.get(c.authToken) ||
+          this.mutes.get(this.access.identityKey(c.authToken))) > Date.now()
       ) {
         c.send({ t: "error", error: "Your room chat is muted." });
         return;
@@ -514,7 +585,8 @@ export class MultiplayerHub {
       }
       if (
         c.kickedUntil > Date.now() ||
-        this.kicks.get(c.authToken) > Date.now()
+        (this.kicks.get(c.authToken) ||
+          this.kicks.get(this.access.identityKey(c.authToken))) > Date.now()
       ) {
         c.send({
           t: "error",
@@ -581,7 +653,11 @@ export class MultiplayerHub {
       }
       c.room = room.id;
       room.empty = null;
-      c.name = cleanName(m.name, `PILOT ${c.id}`);
+      const account = this.access.session(c.authToken)?.account;
+      c.accountId = account?.uid;
+      c.name = account
+        ? account.pilotName || account.displayName
+        : cleanName(m.name, `PILOT ${c.id}`);
       if (this.members(room.id).some((o) => o !== c && o.name === c.name))
         c.name = `${c.name.slice(0, 13)} ${c.id % 100}`;
       c.aircraft = validAircraft(m.aircraft) ? m.aircraft : "f16";
@@ -589,6 +665,7 @@ export class MultiplayerHub {
       c.send({
         t: "welcome",
         id: c.id,
+        accountId: c.accountId,
         name: c.name,
         room: {
           id: room.id,

@@ -160,7 +160,7 @@ function serveFile(req,res,file,stat){
 // Local by default. A hosting platform sets PORT: then listen publicly.
 // HOST overrides either way.
 const PORT=Number(process.env.PORT)||4173,HOST=process.env.HOST||(process.env.PORT?'0.0.0.0':'127.0.0.1');
-const access=new AccessControl({file:process.env.OFS_ACCESS_FILE||path.resolve('.ofs-access-codes.json')});
+const access=new AccessControl({file:process.env.OFS_ACCESS_FILE||path.resolve('.ofs-access-codes.json'),accountsFile:process.env.OFS_ACCOUNTS_FILE||path.resolve('.ofs-accounts.json')});
 const server=http.createServer((req,res)=>{
   const url=new URL(req.url,'http://localhost');
   if(url.pathname.startsWith('/api/access/')){access.handle(req,res,url);return;}
@@ -173,7 +173,7 @@ const server=http.createServer((req,res)=>{
   if(!file.startsWith(root+path.sep)&&file!==root){res.writeHead(403).end();return;}
   // Never serve dot-files and folders (.git) or the server itself.
   const rel=path.relative(root,file);
-  if(rel.split(path.sep).some((part)=>part.startsWith('.'))||['server.mjs','multiplayer-server.mjs','access-control.mjs','room-commands.mjs','ACCESS_CODES.local.txt'].includes(rel)){res.writeHead(404).end('Not found');return;}
+  if(rel.split(path.sep).some((part)=>part.startsWith('.'))||['server.mjs','multiplayer-server.mjs','access-control.mjs','firebase-accounts.mjs','room-commands.mjs','ACCESS_CODES.local.txt'].includes(rel)){res.writeHead(404).end('Not found');return;}
   let stat=fs.statSync(file,{throwIfNoEntry:false});
   if(stat?.isDirectory()){file=path.join(file,'index.html');stat=fs.statSync(file,{throwIfNoEntry:false});}
   if(!stat?.isFile()){res.writeHead(404).end('Not found');return;}

@@ -63,7 +63,14 @@ export function executeServerCommand(hub, c, name, args, profile = {}) {
   }
   if (name === "banlist")
     return (
-      [...hub.access.sessions.values()]
+      [
+        ...new Map(
+          [
+            ...hub.access.sessions.values(),
+            ...hub.access.accounts.users.values(),
+          ].map((s) => [s.banId, s]),
+        ).values(),
+      ]
         .filter((s) => s.bannedUntil > Date.now())
         .map(
           (s) =>
@@ -72,7 +79,10 @@ export function executeServerCommand(hub, c, name, args, profile = {}) {
         .join("\n") || "No active session bans."
     );
   if (name === "unban") {
-    const s = [...hub.access.sessions.values()].find(
+    const s = [
+      ...hub.access.sessions.values(),
+      ...hub.access.accounts.users.values(),
+    ].find(
       (s) => s.banId === args[0]?.toUpperCase() && s.bannedUntil > Date.now(),
     );
     if (!s) throw Error("Unknown active ban. Use /banlist.");
@@ -81,8 +91,14 @@ export function executeServerCommand(hub, c, name, args, profile = {}) {
     if (rank(s.banByRole) > rank(actor.role))
       throw Error("This ban was imposed by a higher role.");
     s.bannedUntil = 0;
+    if (s.uid) hub.access.accounts.ban(s.uid, { bannedUntil: 0 });
+    for (const entry of hub.access.sessions.values())
+      if (s.uid && entry.uid === s.uid) entry.bannedUntil = 0;
     for (const [token, entry] of hub.access.sessions)
-      if (entry === s) hub.kicks.delete(token);
+      if (entry === s || (s.uid && entry.uid === s.uid)) {
+        hub.kicks.delete(token);
+        hub.kicks.delete(hub.access.identityKey(token));
+      }
     return "Session ban removed.";
   }
   const room = hub.rooms.get(c.room);
@@ -106,11 +122,24 @@ export function executeServerCommand(hub, c, name, args, profile = {}) {
         throw Error("A peer or higher role is in this room.");
     };
   const target = () => {
-    const id = Number(args[0]);
-    if (!Number.isInteger(id)) throw Error("Use a pilot ID from /players.");
-    const p = members.find((p) => p.id === id);
+    const value = String(name === "warn" ? args[0] || "" : args.join(" "));
+    const matches = members.filter((p) => {
+      const session = hub.access.session(p.authToken);
+      return hub.requireAccounts
+        ? session?.uid === value ||
+            (
+              session?.account?.pilotName ||
+              session?.account?.displayName ||
+              ""
+            ).toLocaleLowerCase() === value.toLocaleLowerCase()
+        : p.id === Number(value);
+    });
+    const exact = matches.find(p => hub.access.session(p.authToken)?.uid === value);
+    if (!exact && new Set(matches.map(p => hub.access.session(p.authToken)?.uid || p.id)).size > 1)
+      throw Error("More than one account has that name. Use the account ID from /roster.");
+    const p = exact || matches[0];
     if (!p || p === c || rank(hub.access.role(p.authToken)) >= rank(actor.role))
-      throw Error("Choose a lower-role pilot in your room.");
+      throw Error("Choose a lower-rank account in your room.");
     return p;
   };
   const update = () =>
@@ -127,7 +156,10 @@ export function executeServerCommand(hub, c, name, args, profile = {}) {
     });
   if (["kick", "mute", "ban"].includes(name)) {
     const p = target();
-    const result = hub.moderate(c, { action: name, target: p.id });
+    const result = hub.moderate(c, {
+      action: name,
+      target: hub.requireAccounts ? hub.access.session(p.authToken).uid : p.id,
+    });
     return name === "ban"
       ? `${result} Ban ID: ${hub.access.sessions.get(p.authToken)?.banId}`
       : result;
@@ -137,19 +169,36 @@ export function executeServerCommand(hub, c, name, args, profile = {}) {
     return members
       .map(
         (p) =>
-          `${p.id}: ${p.name} · ${hub.access.role(p.authToken)} · ${p.aircraft}`,
+          `${hub.access.session(p.authToken)?.uid || p.id}: ${p.name} · ${hub.access.role(p.authToken)} · ${p.aircraft}`,
       )
       .join("\n");
   if (name === "unmute") {
     const p = target();
-    p.mutedUntil = 0;
-    hub.mutes.delete(p.authToken);
+    const uid = hub.access.session(p.authToken)?.uid;
+    for (const peer of hub.clients)
+      if (
+        peer === p ||
+        (uid && hub.access.session(peer.authToken)?.uid === uid)
+      ) {
+        peer.mutedUntil = 0;
+        hub.mutes.delete(peer.authToken);
+        hub.mutes.delete(hub.access.identityKey(peer.authToken));
+      }
     p.send({ t: "notice", text: "Your room chat is unmuted." });
     return "Chat restored.";
   }
   if (name === "warn") {
     const p = target();
-    p.send({ t: "notice", text: "MODERATOR WARNING: " + text(args.slice(1)) });
+    const uid = hub.access.session(p.authToken)?.uid;
+    for (const peer of hub.clients)
+      if (
+        peer === p ||
+        (uid && hub.access.session(peer.authToken)?.uid === uid)
+      )
+        peer.send({
+          t: "notice",
+          text: "MODERATOR WARNING: " + text(args.slice(1)),
+        });
     return "Warning sent.";
   }
   if (name === "announce") {
