@@ -116,7 +116,13 @@ export class AccessControl {
   }
   async loginFirebase(
     idToken,
-    { code, previousToken, linkCurrent = false, ip = "local" } = {},
+    {
+      code,
+      previousToken,
+      linkCurrent = false,
+      resume = false,
+      ip = "local",
+    } = {},
   ) {
     this.checkRate(ip);
     const identity = await this.verifyIdentity(idToken);
@@ -138,6 +144,14 @@ export class AccessControl {
     } else {
       const current = this.session(previousToken);
       if (current?.uid === identity.uid) codeId = current.codeId;
+      else if (
+        resume &&
+        this.codes.some(
+          (e) =>
+            e.enabled && e.id === this.accounts.users.get(identity.uid)?.codeId,
+        )
+      )
+        codeId = this.accounts.users.get(identity.uid).codeId;
       else {
         const account = this.accounts.upsert(identity);
         return {
@@ -281,6 +295,7 @@ export class AccessControl {
             code: body.code,
             previousToken: token,
             linkCurrent: body.linkCurrent === true,
+            resume: body.resume === true,
             ip: req.socket.remoteAddress,
           }),
         );

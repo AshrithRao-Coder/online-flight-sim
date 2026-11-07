@@ -86,7 +86,7 @@ export const COMMANDS = [
     role: "instructor",
     scope: "flight",
     args: "",
-    description: "Restore only your aircraft hull to 100% in dogfight mode",
+    description: "Restore your aircraft hull to 100% in multiplayer dogfight or solo drone and bandit modes",
   },
   {
     name: "teleport",

@@ -3587,7 +3587,7 @@ body:not(.touch-on) .touch-controls {
 
 #fuel-hud{display:flex;align-items:center;gap:9px;padding:8px 11px;background:#101b29ed;border:1px solid #7b9398;border-radius:7px;color:#edf4ec;font:700 12px system-ui}#fuel-hud.low{color:#ffd36b}#fuel-hud.empty{color:#ff9898}#fuel-bar{width:95px;height:14px;accent-color:#caff70}#fuel-hud.low #fuel-bar{accent-color:#ffd36b}#fuel-hud.empty #fuel-bar{accent-color:#ff9898}
 
-#hull-hud{display:flex;align-items:center;gap:9px;padding:8px 11px;background:#101b29ed;border:1px solid #7b9398;border-radius:7px;color:#caffb2;font:700 12px system-ui}#hull-hud.damaged{color:#ffb282}#hull-bar{width:85px;height:14px;accent-color:#caffb2}#hull-hud.damaged #hull-bar{accent-color:#ff985e}
+#hull-hud{position:fixed;top:174px;left:calc(50% - 120px);width:240px;height:18px;z-index:5;pointer-events:none;display:flex;align-items:center;gap:9px;padding:0;color:#caffb2;font:700 12px ui-monospace,Consolas,monospace}#hull-hud.damaged{color:#ffb282}#hull-bar{width:85px;height:12px;accent-color:#caffb2}#hull-hud.damaged #hull-bar{accent-color:#ff985e}
 
 .hud-corner{right:16px}#quick-flight-tools{margin-left:auto}
 
