@@ -1,3 +1,4 @@
+import { executeAccountCommand, accountLock } from "./account-actions.mjs";
 // Multiplayer relay: a minimal WebSocket server (RFC 6455, text frames only)
 // on /api/mp. Players connect to the lobby, see the public rooms players have
 // made, then join one (or a private one by its code) or create their own:
@@ -236,6 +237,7 @@ class Client {
 export class MultiplayerHub {
   constructor({ access = new AccessControl(), requireAccounts = true } = {}) {
     this.access = access;
+    access.hub = this;
     this.requireAccounts = requireAccounts;
     this.started = Date.now();
     this.lobbyLocked = false;
@@ -301,6 +303,14 @@ export class MultiplayerHub {
     }
   }
   moderate(c, m) {
+    if (this.requireAccounts && ["kick", "ban", "mute"].includes(m.action)) {
+      const result = executeAccountCommand(this.access, c.authToken, m.action, [
+        String(m.target || ""),
+        String(m.duration || { kick: "5m", ban: "1h", mute: "10m" }[m.action]),
+        String(m.reason || ""),
+      ]);
+      return result.text;
+    }
     const powers = {
         kick: "kick",
         mute: "mute",
@@ -455,6 +465,15 @@ export class MultiplayerHub {
     );
   }
   message(c, m) {
+    const lockUid = this.access.sessions.get(
+      m.t === "auth" ? m.token : c.authToken,
+    )?.uid;
+    const lock = accountLock(this.access.accounts.users.get(lockUid));
+    if (lock) {
+      this.exit(c);
+      c.send({ t: "account-lock", lock });
+      return;
+    }
     if (m.t === "auth") {
       if (
         !this.access.session(m.token) ||
@@ -537,6 +556,17 @@ export class MultiplayerHub {
       return;
     }
     if (m.t === "chat") {
+      const account = this.access.accounts.users.get(
+        this.access.sessions.get(c.authToken)?.uid,
+      );
+      if (account?.mutedUntil > Date.now()) {
+        c.send({
+          t: "notice",
+          text:
+            "Chat is muted until " + new Date(account.mutedUntil).toISOString(),
+        });
+        return;
+      }
       if (!c.room) return;
       if (
         c.mutedUntil > Date.now() ||
@@ -700,6 +730,14 @@ export class MultiplayerHub {
       return;
     }
     if (room?.mode !== "dogfight") return;
+    const account = this.access.accounts.users.get(
+      this.access.sessions.get(c.authToken)?.uid,
+    );
+    if (
+      account?.disarmedUntil > Date.now() &&
+      ["hit", "mst", "msl", "bomb", "boom", "gun", "kill"].includes(m.t)
+    )
+      return;
     const target = [...this.clients].find(
       (o) => o.id === m.target && o.room === c.room && o !== c,
     );
@@ -882,6 +920,12 @@ export class MultiplayerHub {
   }
   tick() {
     const now = Date.now();
+    if (this.lobbyLockedUntil && this.lobbyLockedUntil <= now)
+      this.lobbyLocked = false;
+    for (const room of this.rooms.values()) {
+      if (room.lockUntil && room.lockUntil <= now) room.locked = false;
+      if (room.chatDelayUntil && room.chatDelayUntil <= now) room.chatDelay = 0;
+    }
     for (const map of [this.kicks, this.mutes])
       for (const [key, until] of map) if (until <= now) map.delete(key);
     for (const c of this.clients)

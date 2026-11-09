@@ -1,3 +1,4 @@
+import { duration, executeAccountCommand } from "./account-actions.mjs";
 import { commandByName } from "./command-catalog.js";
 import { rank } from "./access-policy.js";
 const text = (args) => {
@@ -9,6 +10,8 @@ const text = (args) => {
   return s;
 };
 export function executeServerCommand(hub, c, name, args, profile = {}) {
+  if (hub.requireAccounts && commandByName(name)?.accountAction)
+    return executeAccountCommand(hub.access, c.authToken, name, args);
   const command = commandByName(name),
     actor = hub.access.session(c.authToken);
   if (!command || command.scope !== "server")
@@ -53,6 +56,9 @@ export function executeServerCommand(hub, c, name, args, profile = {}) {
   }
   if (name === "locklobby" || name === "unlocklobby") {
     hub.lobbyLocked = name === "locklobby";
+    hub.lobbyLockedUntil = hub.lobbyLocked
+      ? Date.now() + duration(args[0], 1800000)
+      : 0;
     all({
       t: "notice",
       text: hub.lobbyLocked
@@ -134,9 +140,17 @@ export function executeServerCommand(hub, c, name, args, profile = {}) {
             ).toLocaleLowerCase() === value.toLocaleLowerCase()
         : p.id === Number(value);
     });
-    const exact = matches.find(p => hub.access.session(p.authToken)?.uid === value);
-    if (!exact && new Set(matches.map(p => hub.access.session(p.authToken)?.uid || p.id)).size > 1)
-      throw Error("More than one account has that name. Use the account ID from /roster.");
+    const exact = matches.find(
+      (p) => hub.access.session(p.authToken)?.uid === value,
+    );
+    if (
+      !exact &&
+      new Set(matches.map((p) => hub.access.session(p.authToken)?.uid || p.id))
+        .size > 1
+    )
+      throw Error(
+        "More than one account has that name. Use the account ID from /roster.",
+      );
     const p = exact || matches[0];
     if (!p || p === c || rank(hub.access.role(p.authToken)) >= rank(actor.role))
       throw Error("Choose a lower-rank account in your room.");
@@ -213,6 +227,7 @@ export function executeServerCommand(hub, c, name, args, profile = {}) {
     if (!Number.isInteger(n) || n < 1 || n > 30)
       throw Error("Use 1 to 30 seconds.");
     room.chatDelay = n * 1000;
+    room.chatDelayUntil = Date.now() + duration(args[1], 1800000);
     hub.broadcast(c.room, {
       t: "notice",
       text: `Room chat interval: ${n} seconds. Staff exempt.`,
@@ -240,6 +255,7 @@ export function executeServerCommand(hub, c, name, args, profile = {}) {
   guardRoom();
   if (name === "lockroom" || name === "unlockroom") {
     room.locked = name === "lockroom";
+    room.lockUntil = room.locked ? Date.now() + duration(args[0], 1800000) : 0;
     room.lockRank = rank(actor.role);
     update();
     return "Room " + (room.locked ? "locked." : "unlocked.");

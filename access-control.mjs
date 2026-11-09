@@ -1,4 +1,9 @@
 import {
+  accountLock,
+  accountRole,
+  executeAccountCommand,
+} from "./account-actions.mjs";
+import {
   AccountRegistry,
   verifyFirebaseIdentity,
 } from "./firebase-accounts.mjs";
@@ -85,22 +90,30 @@ export class AccessControl {
       permissions: permissions(entry.role),
     };
   }
-  session(token) {
+  session(token, { allowLocked = false } = {}) {
     const s = this.sessions.get(token);
-    if (!s || s.expires < Date.now() || s.bannedUntil > Date.now()) return null;
+    if (
+      !s ||
+      s.expires < Date.now() ||
+      (!allowLocked && s.bannedUntil > Date.now())
+    )
+      return null;
     const account = s.uid ? this.accounts.users.get(s.uid) : null;
     if (
       s.uid &&
-      (!account || !account.emailVerified || account.bannedUntil > Date.now())
+      (!account ||
+        !account.emailVerified ||
+        (!allowLocked && accountLock(account)))
     )
       return null;
     const code = this.codes.find(
       (e) => e.id === (account?.codeId ?? s.codeId) && e.enabled,
     );
-    if (!code) return null;
+    if (!code && !account?.giftedRole && rank(account?.assignedRole) < 0)
+      return null;
     return {
       ...s,
-      role: code?.role || "player",
+      role: account ? accountRole(this, account) : code?.role || "player",
       ...(account
         ? {
             account: {
@@ -109,6 +122,7 @@ export class AccessControl {
               displayName: account.pilotName || account.displayName,
               pilotName: account.pilotName || account.displayName,
               emailVerified: account.emailVerified,
+              codeChangesLocked: !!account.codeChangesLocked,
             },
           }
         : {}),
@@ -128,10 +142,13 @@ export class AccessControl {
     const identity = await this.verifyIdentity(idToken);
     if (!identity.emailVerified || !identity.email)
       throw Error("Verify your email before choosing a rank code.");
-    if (this.accounts.users.get(identity.uid)?.bannedUntil > Date.now())
-      throw Error("This account is temporarily banned.");
+
     let codeId;
     if (code !== undefined) {
+      if (this.accounts.users.get(identity.uid)?.codeChangesLocked)
+        throw Error(
+          "Access-code changes are locked by staff. Ask staff to use /allowcodes on this account.",
+        );
       if (typeof code !== "string" || code.length > 160)
         throw Error("Wrong or disabled code.");
       const hash = crypto
@@ -142,9 +159,11 @@ export class AccessControl {
       if (!entry) throw Error("Wrong or disabled code.");
       codeId = entry.id;
     } else {
-      const current = this.session(previousToken);
+      const current = this.session(previousToken, { allowLocked: true });
       if (current?.uid === identity.uid) codeId = current.codeId;
       else if (
+        rank(this.accounts.users.get(identity.uid)?.assignedRole) >= 0 ||
+        this.accounts.users.get(identity.uid)?.giftedRole ||
         this.codes.some(
           (e) =>
             e.enabled && e.id === this.accounts.users.get(identity.uid)?.codeId,
@@ -171,6 +190,12 @@ export class AccessControl {
     if (this.sessions.size >= 5000)
       throw Error("Server session limit reached.");
     this.accounts.upsert(identity, codeId);
+    if (code !== undefined)
+      this.accounts.ban(identity.uid, {
+        assignedRole: null,
+        giftedRole: null,
+        giftedBy: null,
+      });
     const token = crypto.randomBytes(32).toString("hex");
     const account = this.accounts.users.get(identity.uid);
     this.sessions.set(token, {
@@ -178,12 +203,13 @@ export class AccessControl {
       codeId: account.codeId,
       expires: identity.expires,
     });
-    const session = this.session(token);
+    const session = this.session(token, { allowLocked: true });
     if (previousToken) this.sessions.delete(previousToken);
     return {
       token,
       role: session.role,
       permissions: permissions(session.role),
+      moderation: accountLock(account),
       account: session.account,
     };
   }
@@ -267,15 +293,30 @@ export class AccessControl {
       if (req.method === "GET" && path === "status")
         return send(200, { enabled: true, firebase: true });
       if (req.method === "GET" && path === "session") {
-        const s = this.session(token);
+        const s = this.session(token, { allowLocked: true });
         if (!s?.account?.emailVerified)
           return send(401, {
             error: "Session expired. Enter your code again.",
           });
         return send(200, {
           role: s.role,
+          moderation: accountLock(this.accounts.users.get(s.uid)),
           permissions: permissions(s.role),
           ...(s.account ? { account: s.account } : {}),
+        });
+      }
+      if (req.method === "GET" && path === "account-state") {
+        const s = this.session(token, { allowLocked: true });
+        if (!s?.uid) return send(401, { error: "Reconnect your account." });
+        const user = this.accounts.users.get(s.uid);
+        user.lastSeen = Date.now();
+        return send(200, {
+          moderation: accountLock(user),
+          mutedUntil: user.mutedUntil || 0,
+          disarmedUntil: user.disarmedUntil || 0,
+          codeChangesLocked: !!user.codeChangesLocked,
+          role: s.role,
+          actions: accountLock(user) ? [] : user.pendingActions || [],
         });
       }
       if (req.method !== "POST")
@@ -287,6 +328,23 @@ export class AccessControl {
           return send(413, { error: "Request too large." });
       }
       const body = JSON.parse(raw || "{}");
+      if (path === "command")
+        return send(
+          200,
+          executeAccountCommand(this, token, body.name, body.args),
+        );
+      if (path === "action-ack") {
+        const s = this.session(token);
+        if (!s?.uid) return send(403, { error: "Account locked." });
+        const user = this.accounts.users.get(s.uid);
+        const ids = Array.isArray(body.ids) ? body.ids.slice(0, 30) : [];
+        this.accounts.ban(s.uid, {
+          pendingActions: (user.pendingActions || []).filter(
+            (a) => !ids.includes(a.id),
+          ),
+        });
+        return send(200, { ok: true });
+      }
       if (path === "firebase") {
         return send(
           200,
