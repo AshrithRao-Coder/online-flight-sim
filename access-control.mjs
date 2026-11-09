@@ -347,7 +347,9 @@ export class AccessControl {
       if (path === "command")
         return send(
           200,
-          executeAccountCommand(this, token, body.name, body.args),
+          executeAccountCommand(this, token, body.name, body.args, {
+            targets: body.targets,
+          }),
         );
       if (path === "action-ack") {
         const s = this.session(token);

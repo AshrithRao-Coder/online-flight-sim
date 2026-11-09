@@ -23,3 +23,5 @@ All other-pilot controls are in Commands. /promote and /demote (plus all variant
 Admin /lockcodes {Pilot} locks self-service code changes without changing rank. /lockcodesall targets all eligible pilots. /allowcodes {Pilot} reverses the lock.
 
 The Moderator-only Pilots list has its own sidebar/flight-toolbar panel, separate from Quick commands. The roster command has been removed.
+
+Any command with a pilot-name field accepts up to 20 arbitrary pilot names. Use double quotes and either no spaces around every & or exactly one space on both sides throughout the group: `/ban 30s "Alex"&"Robin"&"Sam"` or `/ban 30s "Alex" & "Robin" & "Sam"`. Mixed or uneven spacing is rejected. This also works for aircraft actions, for example `/repair "Alex"&"Robin"&"Sam"`. All targets and permissions are checked before applying the group; an unknown or protected pilot rejects the whole command. The existing 512-character command limit still applies.

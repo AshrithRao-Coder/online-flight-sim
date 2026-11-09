@@ -122,7 +122,13 @@ export function validateAircraftArgs(name, args) {
       throw Error("Use a whole target count.");
   }
 }
-export function executeAccountCommand(access, token, name, args = []) {
+export function executeAccountCommand(
+  access,
+  token,
+  name,
+  args = [],
+  options = {},
+) {
   const actor = access.session(token),
     definition = commandByName(name);
   const spec = definition?.targetable
@@ -160,19 +166,43 @@ export function executeAccountCommand(access, token, name, args = []) {
   const value = all ? null : String(args[0] || "");
   let rest = all ? args : args.slice(1);
   const users = [...access.accounts.users.values()];
+  const multiple = options.targets !== undefined;
+  if (
+    multiple &&
+    (!Array.isArray(options.targets) ||
+      options.targets.length < 2 ||
+      options.targets.length > 20 ||
+      options.targets.some(
+        (v) => typeof v !== "string" || !v.trim() || v.length > 240,
+      ) ||
+      all ||
+      !definition.args.includes("{Pilot's Name"))
+  )
+    throw Error("Invalid pilot-name list.");
+  const resolve = (value) => {
+    const matches = users.filter(
+      (u) =>
+        u.uid === value ||
+        (base === "unban" && u.banId === value) ||
+        (u.pilotName || u.displayName || "").toLocaleLowerCase() ===
+          value.toLocaleLowerCase(),
+    );
+    const exact = matches.find((u) => u.uid === value);
+    if (exact) return exact;
+    if (matches.length !== 1)
+      throw Error("Choose a unique pilot name from the Pilots list: " + value);
+    return matches[0];
+  };
   let targets = all
     ? users.filter((u) => u.uid !== actor.uid)
-    : users.filter(
-        (u) =>
-          u.uid === value ||
-          (base === "unban" && u.banId === value) ||
-          (u.pilotName || u.displayName || "").toLocaleLowerCase() ===
-            value.toLocaleLowerCase(),
-      );
-  const exact = targets.find((u) => u.uid === value);
-  if (exact && !all) targets = [exact];
-  if (!all && targets.length !== 1)
-    throw Error("Choose a unique pilot name from the Pilots list.");
+    : [
+        ...new Map(
+          (multiple ? options.targets : [value]).map((v) => {
+            const u = resolve(v);
+            return [u.uid, u];
+          }),
+        ).values(),
+      ];
   const dangerous = !["repair", "rearm", "refuel"].includes(base);
   targets = targets.filter(
     (u) =>
@@ -263,7 +293,7 @@ export function executeAccountCommand(access, token, name, args = []) {
             !u.codeChangesLocked)
         : rank(level) > rank(accountRole(access, u));
     if (all) targets = targets.filter(eligible);
-    else if (!eligible(targets[0]))
+    else if (targets.some((u) => !eligible(u)))
       throw Error(
         "Choose a lower level for demote or a higher level for promote.",
       );
