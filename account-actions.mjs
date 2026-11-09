@@ -144,17 +144,6 @@ export function executeAccountCommand(access, token, name, args = []) {
     args.some((v) => typeof v !== "string" || v.length > 240)
   )
     throw Error("Invalid arguments.");
-  if (name === "roster")
-    return {
-      text:
-        accountRoster(access)
-          .map(
-            (p) =>
-              `${p.uid}: ${p.name} - ${p.role} - ${p.online ? "ONLINE" : "OFFLINE"}`,
-          )
-          .join("\n") || "No registered pilots.",
-      data: { pilots: accountRoster(access) },
-    };
   if (name === "banlist")
     return {
       text:
@@ -183,7 +172,7 @@ export function executeAccountCommand(access, token, name, args = []) {
   const exact = targets.find((u) => u.uid === value);
   if (exact && !all) targets = [exact];
   if (!all && targets.length !== 1)
-    throw Error("Choose a unique pilot name or account ID from /roster.");
+    throw Error("Choose a unique pilot name from the Pilots list.");
   const dangerous = !["repair", "rearm", "refuel"].includes(base);
   targets = targets.filter(
     (u) =>
@@ -268,7 +257,10 @@ export function executeAccountCommand(access, token, name, args = []) {
       throw Error("Choose a valid access level.");
     const eligible = (u) =>
       base === "demote"
-        ? rank(level) < rank(accountRole(access, u)) || (rest[1] && rank(level)===rank(accountRole(access,u)) && !u.codeChangesLocked)
+        ? rank(level) < rank(accountRole(access, u)) ||
+          (rest[1] &&
+            rank(level) === rank(accountRole(access, u)) &&
+            !u.codeChangesLocked)
         : rank(level) > rank(accountRole(access, u));
     if (all) targets = targets.filter(eligible);
     else if (!eligible(targets[0]))
@@ -337,7 +329,8 @@ export function executeAccountCommand(access, token, name, args = []) {
           ? { codeChangesLocked: true, codeLockBy: actor.uid }
           : {}),
       });
-    else if(base==="lockcodes")Object.assign(patch,{codeChangesLocked:true,codeLockBy:actor.uid});
+    else if (base === "lockcodes")
+      Object.assign(patch, { codeChangesLocked: true, codeLockBy: actor.uid });
     else if (base === "allowcodes") patch.codeChangesLocked = false;
     else if (base === "rearm") {
       patch.disarmedUntil = 0;

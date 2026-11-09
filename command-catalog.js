@@ -231,14 +231,6 @@ export const COMMANDS = [
     "description": "Clear the room chat display"
   },
   {
-    "name": "roster",
-    "role": "moderator",
-    "scope": "server",
-    "args": "",
-    "description": "View all registered pilots, online or offline",
-    "accountAction": true
-  },
-  {
     "name": "ban",
     "role": "manager",
     "scope": "server",

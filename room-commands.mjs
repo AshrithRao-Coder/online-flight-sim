@@ -149,7 +149,7 @@ export function executeServerCommand(hub, c, name, args, profile = {}) {
         .size > 1
     )
       throw Error(
-        "More than one account has that name. Use the account ID from /roster.",
+        "More than one account has that name. Choose a unique pilot name.",
       );
     const p = exact || matches[0];
     if (!p || p === c || rank(hub.access.role(p.authToken)) >= rank(actor.role))
@@ -179,13 +179,6 @@ export function executeServerCommand(hub, c, name, args, profile = {}) {
       : result;
   }
   if (name === "close-room") return hub.moderate(c, { action: "closeRoom" });
-  if (name === "roster")
-    return members
-      .map(
-        (p) =>
-          `${hub.access.session(p.authToken)?.uid || p.id}: ${p.name} · ${hub.access.role(p.authToken)} · ${p.aircraft}`,
-      )
-      .join("\n");
   if (name === "unmute") {
     const p = target();
     const uid = hub.access.session(p.authToken)?.uid;
