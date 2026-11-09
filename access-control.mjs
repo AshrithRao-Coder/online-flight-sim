@@ -145,7 +145,6 @@ export class AccessControl {
       const current = this.session(previousToken);
       if (current?.uid === identity.uid) codeId = current.codeId;
       else if (
-        resume &&
         this.codes.some(
           (e) =>
             e.enabled && e.id === this.accounts.users.get(identity.uid)?.codeId,
