@@ -1,6 +1,7 @@
 import {
   accountLock,
   accountRole,
+  accountRoster,
   executeAccountCommand,
 } from "./account-actions.mjs";
 import {
@@ -303,6 +304,21 @@ export class AccessControl {
           moderation: accountLock(this.accounts.users.get(s.uid)),
           permissions: permissions(s.role),
           ...(s.account ? { account: s.account } : {}),
+        });
+      }
+      if (req.method === "GET" && path === "pilots") {
+        const session = this.session(token);
+        if (!session?.uid)
+          return send(401, { error: "Sign in to view pilots." });
+        if (rank(session.role) < rank("moderator"))
+          return send(403, {
+            error: "Moderator access required to view pilots.",
+          });
+        return send(200, {
+          pilots: accountRoster(this).map((p) => ({
+            name: p.name,
+            online: p.online,
+          })),
         });
       }
       if (req.method === "GET" && path === "account-state") {

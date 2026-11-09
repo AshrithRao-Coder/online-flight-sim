@@ -13,8 +13,8 @@ export const COMMANDS = [
     "optionalArgs": true,
     "role": "pilot",
     "scope": "flight",
-    "args": "{Fuel percentage 0-100 (optional)} {Pilot (optional)}",
-    "description": "Refill fuel, optionally to a percentage Other pilots: INSTRUCTOR.",
+    "args": "{Fuel percentage 0-100 (optional)} {Pilot's Name (optional)}",
+    "description": "Refill fuel, optionally to a percentage",
     "selfArgs": 1,
     "targetable": true,
     "targetRole": "instructor"
@@ -23,8 +23,8 @@ export const COMMANDS = [
     "name": "bookmark",
     "role": "pilot",
     "scope": "flight",
-    "args": "{Bookmark name} {Pilot (optional)}",
-    "description": "Save this flight position for the session Other pilots: INSTRUCTOR.",
+    "args": "{Bookmark name} {Pilot's Name (optional)}",
+    "description": "Save this flight position for the session",
     "selfArgs": 1,
     "targetable": true,
     "targetRole": "instructor"
@@ -40,8 +40,8 @@ export const COMMANDS = [
     "name": "rearm",
     "role": "vip",
     "scope": "flight",
-    "args": "{Pilot (optional)}",
-    "description": "Instantly replenish your aircraft weapons Other pilots: INSTRUCTOR.",
+    "args": "{Pilot's Name (optional)}",
+    "description": "Instantly replenish your aircraft weapons",
     "selfArgs": 0,
     "targetable": true,
     "targetRole": "instructor"
@@ -50,8 +50,8 @@ export const COMMANDS = [
     "name": "level",
     "role": "vip",
     "scope": "flight",
-    "args": "{Pilot (optional)}",
-    "description": "Level the wings and stop pitch/roll rotation Other pilots: INSTRUCTOR.",
+    "args": "{Pilot's Name (optional)}",
+    "description": "Level the wings and stop pitch/roll rotation",
     "selfArgs": 0,
     "targetable": true,
     "targetRole": "instructor"
@@ -60,8 +60,8 @@ export const COMMANDS = [
     "name": "heading",
     "role": "vip",
     "scope": "flight",
-    "args": "{Heading in degrees 0-360} {Pilot (optional)}",
-    "description": "Turn to an exact compass heading Other pilots: INSTRUCTOR.",
+    "args": "{Heading in degrees 0-360} {Pilot's Name (optional)}",
+    "description": "Turn to an exact compass heading",
     "selfArgs": 1,
     "targetable": true,
     "targetRole": "instructor"
@@ -70,8 +70,8 @@ export const COMMANDS = [
     "name": "speed",
     "role": "vip",
     "scope": "flight",
-    "args": "{Airspeed in knots} {Pilot (optional)}",
-    "description": "Instantly set the indicated airspeed in knots Other pilots: INSTRUCTOR.",
+    "args": "{Airspeed in knots} {Pilot's Name (optional)}",
+    "description": "Instantly set the indicated airspeed in knots",
     "selfArgs": 1,
     "targetable": true,
     "targetRole": "instructor"
@@ -81,8 +81,8 @@ export const COMMANDS = [
     "optionalArgs": true,
     "role": "vip",
     "scope": "flight",
-    "args": "{Airspeed in knots (optional)} {Pilot (optional)}",
-    "description": "Instantly set airspeed, or add 25 percent if omitted Other pilots: INSTRUCTOR.",
+    "args": "{Airspeed in knots (optional)} {Pilot's Name (optional)}",
+    "description": "Instantly set airspeed, or add 25 percent if omitted",
     "selfArgs": 1,
     "targetable": true,
     "targetRole": "instructor"
@@ -91,8 +91,8 @@ export const COMMANDS = [
     "name": "weatherpresets",
     "role": "vip",
     "scope": "flight",
-    "args": "{Weather presets} {Pilot (optional)}",
-    "description": "Weather, turbulence and crosswind: clear, few, scattered, overcast, rain, storm, breezy, crosswind, gusty, severe, hurricane or hurricane-extreme Other pilots: INSTRUCTOR.",
+    "args": "{Weather presets} {Pilot's Name (optional)}",
+    "description": "Weather, turbulence and crosswind: clear, few, scattered, overcast, rain, storm, breezy, crosswind, gusty, severe, hurricane or hurricane-extreme",
     "selfArgs": 1,
     "targetable": true,
     "targetRole": "instructor"
@@ -101,8 +101,8 @@ export const COMMANDS = [
     "name": "mode",
     "role": "vip",
     "scope": "flight",
-    "args": "{Solo mode: free or guns or drone or bandit} {Pilot (optional)}",
-    "description": "Switch your current solo game without restarting Other pilots: INSTRUCTOR.",
+    "args": "{Solo mode: free or guns or drone or bandit} {Pilot's Name (optional)}",
+    "description": "Switch your current solo game without restarting",
     "selfArgs": 1,
     "targetable": true,
     "targetRole": "instructor"
@@ -111,8 +111,8 @@ export const COMMANDS = [
     "name": "repair",
     "role": "instructor",
     "scope": "flight",
-    "args": "{Pilot (optional)}",
-    "description": "Restore your aircraft hull to 100% in multiplayer dogfight or solo drone and bandit modes Other pilots: INSTRUCTOR.",
+    "args": "{Pilot's Name (optional)}",
+    "description": "Restore your aircraft hull to 100% in multiplayer dogfight or solo drone and bandit modes",
     "selfArgs": 0,
     "targetable": true,
     "targetRole": "instructor"
@@ -121,8 +121,8 @@ export const COMMANDS = [
     "name": "teleport",
     "role": "instructor",
     "scope": "flight",
-    "args": "{Latitude} {Longitude} {Altitude in feet (optional)} {Pilot (optional)}",
-    "description": "Move to latitude, longitude and optional altitude in feet Other pilots: INSTRUCTOR.",
+    "args": "{Latitude} {Longitude} {Altitude in feet (optional)} {Pilot's Name (optional)}",
+    "description": "Move to latitude, longitude and optional altitude in feet",
     "selfArgs": 3,
     "targetable": true,
     "targetRole": "instructor"
@@ -131,8 +131,8 @@ export const COMMANDS = [
     "name": "return",
     "role": "instructor",
     "scope": "flight",
-    "args": "{Bookmark name} {Pilot (optional)}",
-    "description": "Return to a saved flight bookmark Other pilots: INSTRUCTOR.",
+    "args": "{Bookmark name} {Pilot's Name (optional)}",
+    "description": "Return to a saved flight bookmark",
     "selfArgs": 1,
     "targetable": true,
     "targetRole": "instructor"
@@ -141,8 +141,8 @@ export const COMMANDS = [
     "name": "rewind",
     "role": "instructor",
     "scope": "flight",
-    "args": "{Seconds 5-60} {Pilot (optional)}",
-    "description": "Rewind your flight by 5 to 60 seconds Other pilots: INSTRUCTOR.",
+    "args": "{Seconds 5-60} {Pilot's Name (optional)}",
+    "description": "Rewind your flight by 5 to 60 seconds",
     "selfArgs": 1,
     "targetable": true,
     "targetRole": "instructor"
@@ -151,8 +151,8 @@ export const COMMANDS = [
     "name": "practice",
     "role": "instructor",
     "scope": "flight",
-    "args": "{Practice type: stall or engineout or approach or recovery} {Pilot (optional)}",
-    "description": "Set up stall, engineout, approach or recovery practice Other pilots: INSTRUCTOR.",
+    "args": "{Practice type: stall or engineout or approach or recovery} {Pilot's Name (optional)}",
+    "description": "Set up stall, engineout, approach or recovery practice",
     "selfArgs": 1,
     "targetable": true,
     "targetRole": "instructor"
@@ -161,8 +161,8 @@ export const COMMANDS = [
     "name": "spawn",
     "role": "instructor",
     "scope": "flight",
-    "args": "{Target type: drone or bandit or ground} {Count 1-8} {Pilot (optional)}",
-    "description": "Spawn 1 to 8 drone, bandit or ground targets in solo combat Other pilots: INSTRUCTOR.",
+    "args": "{Target type: drone or bandit or ground} {Count 1-8} {Pilot's Name (optional)}",
+    "description": "Spawn 1 to 8 drone, bandit or ground targets in solo combat",
     "selfArgs": 2,
     "targetable": true,
     "targetRole": "instructor"
@@ -171,8 +171,8 @@ export const COMMANDS = [
     "name": "cleartargets",
     "role": "instructor",
     "scope": "flight",
-    "args": "{Pilot (optional)}",
-    "description": "Remove your local practice targets Other pilots: INSTRUCTOR.",
+    "args": "{Pilot's Name (optional)}",
+    "description": "Remove your local practice targets",
     "selfArgs": 0,
     "targetable": true,
     "targetRole": "instructor"
@@ -181,7 +181,7 @@ export const COMMANDS = [
     "name": "kick",
     "role": "moderator",
     "scope": "server",
-    "args": "{Pilot} {Duration: 30s or 5m or 2h or infinite} {Reason (optional)}",
+    "args": "{Pilot's Name} {Duration: 30s or 5m or 2h or infinite} {Reason (optional)}",
     "description": "kick a pilot account without changing its access code",
     "accountAction": true
   },
@@ -189,7 +189,7 @@ export const COMMANDS = [
     "name": "mute",
     "role": "moderator",
     "scope": "server",
-    "args": "{Pilot} {Duration: 30s or 5m or 2h or infinite} {Reason (optional)}",
+    "args": "{Pilot's Name} {Duration: 30s or 5m or 2h or infinite} {Reason (optional)}",
     "description": "mute a pilot account without changing its access code",
     "accountAction": true
   },
@@ -197,7 +197,7 @@ export const COMMANDS = [
     "name": "unmute",
     "role": "moderator",
     "scope": "server",
-    "args": "{Pilot}",
+    "args": "{Pilot's Name}",
     "description": "unmute a pilot account without changing its access code",
     "accountAction": true
   },
@@ -205,7 +205,7 @@ export const COMMANDS = [
     "name": "warn",
     "role": "moderator",
     "scope": "server",
-    "args": "{Pilot} {Duration: 30s or 5m or 2h or infinite} {Reason (optional)}",
+    "args": "{Pilot's Name} {Duration: 30s or 5m or 2h or infinite} {Reason (optional)}",
     "description": "warn a pilot account without changing its access code",
     "accountAction": true
   },
@@ -232,7 +232,7 @@ export const COMMANDS = [
   },
   {
     "name": "roster",
-    "role": "instructor",
+    "role": "moderator",
     "scope": "server",
     "args": "",
     "description": "View all registered pilots, online or offline",
@@ -242,7 +242,7 @@ export const COMMANDS = [
     "name": "ban",
     "role": "manager",
     "scope": "server",
-    "args": "{Pilot} {Duration: 30s or 5m or 2h or infinite} {Reason (optional)}",
+    "args": "{Pilot's Name} {Duration: 30s or 5m or 2h or infinite} {Reason (optional)}",
     "description": "ban a pilot account without changing its access code",
     "accountAction": true
   },
@@ -258,7 +258,7 @@ export const COMMANDS = [
     "name": "unban",
     "role": "manager",
     "scope": "server",
-    "args": "{Pilot}",
+    "args": "{Pilot's Name}",
     "description": "unban a pilot account without changing its access code",
     "accountAction": true
   },
@@ -353,8 +353,8 @@ export const COMMANDS = [
     "name": "unlimited-fuel",
     "role": "admin",
     "scope": "flight",
-    "args": "{on or off} {Pilot (optional)}",
-    "description": "Keep your own fuel full until disabled Other pilots: ADMIN.",
+    "args": "{on or off} {Pilot's Name (optional)}",
+    "description": "Keep your own fuel full until disabled",
     "selfArgs": 1,
     "targetable": true,
     "targetRole": "admin"
@@ -363,8 +363,8 @@ export const COMMANDS = [
     "name": "noclip",
     "role": "admin",
     "scope": "flight",
-    "args": "{on or off} {Pilot (optional)}",
-    "description": "Disable scenery collisions for your own flight Other pilots: ADMIN.",
+    "args": "{on or off} {Pilot's Name (optional)}",
+    "description": "Disable scenery collisions for your own flight",
     "selfArgs": 1,
     "targetable": true,
     "targetRole": "admin"
@@ -398,9 +398,9 @@ export const COMMANDS = [
     "name": "disarm",
     "role": "instructor",
     "scope": "flight",
-    "args": "{Pilot (optional)}",
+    "args": "{Pilot's Name (optional)}",
     "optionalArgs": true,
-    "description": "Disarm your aircraft, or a pilot, until rearmed. Other pilots: INSTRUCTOR.",
+    "description": "Disarm your aircraft, or a pilot, until rearmed.",
     "selfArgs": 0,
     "targetable": true,
     "targetRole": "instructor"
@@ -660,7 +660,7 @@ export const COMMANDS = [
     "accountAction": true,
     "action": "unkick",
     "allPilots": false,
-    "args": "{Pilot}",
+    "args": "{Pilot's Name}",
     "description": "unkick a lower-rank account"
   },
   {
@@ -680,7 +680,7 @@ export const COMMANDS = [
     "accountAction": true,
     "action": "unwarn",
     "allPilots": false,
-    "args": "{Pilot}",
+    "args": "{Pilot's Name}",
     "description": "unwarn a lower-rank account"
   },
   {
@@ -700,7 +700,7 @@ export const COMMANDS = [
     "accountAction": true,
     "action": "demote",
     "allPilots": false,
-    "args": "{Pilot} {Lower access level} {lockcodes (optional)}",
+    "args": "{Pilot's Name} {Lower access level} {lockcodes (optional)}",
     "description": "Demote a pilot; optionally lock self-service code changes until /allowcodes"
   },
   {
@@ -720,7 +720,7 @@ export const COMMANDS = [
     "accountAction": true,
     "action": "promote",
     "allPilots": false,
-    "args": "{Pilot} {Higher access level}",
+    "args": "{Pilot's Name} {Higher access level}",
     "description": "Promote a pilot; a valid code can change it again"
   },
   {
@@ -740,7 +740,7 @@ export const COMMANDS = [
     "accountAction": true,
     "action": "allowcodes",
     "allPilots": false,
-    "args": "{Pilot}",
+    "args": "{Pilot's Name}",
     "description": "Allow a pilot to change access codes again"
   },
   {
@@ -760,7 +760,7 @@ export const COMMANDS = [
     "accountAction": true,
     "action": "lockcodes",
     "allPilots": false,
-    "args": "{Pilot}",
+    "args": "{Pilot's Name}",
     "description": "Lock access-code changes for a pilot without changing rank"
   },
   {
