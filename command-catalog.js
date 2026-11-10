@@ -764,6 +764,56 @@ export const COMMANDS = [
     "allPilots": true,
     "args": "",
     "description": "Lock access-code changes for all eligible pilots without changing rank"
+  },
+  {
+    "name": "friendadd",
+    "role": "moderator",
+    "scope": "server",
+    "friendModeration": "add",
+    "allPilots": false,
+    "pilotFields": [
+      0,
+      1
+    ],
+    "args": "({Pilot's Name}, {Other Pilot's Name})",
+    "description": "Create a friendship between two pilots without a request"
+  },
+  {
+    "name": "friendaddall",
+    "role": "moderator",
+    "scope": "server",
+    "friendModeration": "add",
+    "allPilots": true,
+    "pilotFields": [
+      0
+    ],
+    "args": "{Pilot's Name}",
+    "description": "Create friendships between the named pilot and all other pilots"
+  },
+  {
+    "name": "friendremove",
+    "role": "moderator",
+    "scope": "server",
+    "friendModeration": "remove",
+    "allPilots": false,
+    "pilotFields": [
+      0,
+      1
+    ],
+    "args": "({Pilot's Name}, {Other Pilot's Name})",
+    "description": "Remove a friendship or pending request between two pilots"
+  },
+  {
+    "name": "friendremoveall",
+    "role": "moderator",
+    "scope": "server",
+    "friendModeration": "remove",
+    "allPilots": true,
+    "pilotFields": [
+      0
+    ],
+    "args": "{Pilot's Name}",
+    "description": "Remove all friendships and pending requests for the named pilot"
   }
 ];
 export const commandByName = name => COMMANDS.find(c=>c.name===name);

@@ -4,7 +4,7 @@ A browser flight simulator with 55 aircraft, satellite imagery, measured terrain
 
 Play: https://AshrithRao-Coder.github.io/online-flight-sim/
 
-Features include working cockpit controls, aircraft damage and failures, custom liveries, weather and wind, combat, and a searchable 81-command console across seven access levels. One health bar shows aircraft condition in solo combat modes and multiplayer dogfight rooms. Notifications stay above Multiplayer, Access/Admin and Command panels.
+Features include working cockpit controls, aircraft damage and failures, custom liveries, weather and wind, combat, and a searchable 85-command console across seven access levels. One health bar shows aircraft condition in solo combat modes and multiplayer dogfight rooms. Notifications stay above Multiplayer, Access/Admin and Command panels.
 
 Firebase sign-in and verified email are required. After verification, enter a rank access code to play; the Admin code is not a sign-in method. Account supports editable pilot names, Google/password provider linking, verification and sign-out. Moderation targets accounts across connections and aircraft changes. Analytics is not enabled.
 
@@ -25,3 +25,11 @@ Admin /lockcodes {Pilot} locks self-service code changes without changing rank. 
 The Moderator-only Pilots list has its own sidebar/flight-toolbar panel, separate from Quick commands. The roster command has been removed.
 
 Any command with a pilot-name field accepts up to 20 arbitrary pilot names. Use double quotes with any number of spaces around each &: `/ban 30s ("Alex"&"Robin"&"Sam")` or `/ban 30s ("Alex" & "Robin" & "Sam")`. Spacing may differ on either side and between names, including no spaces. This also works for aircraft actions, for example `/repair ("Alex"&"Robin"&"Sam")`. All targets and permissions are checked before applying the group; an unknown or protected pilot rejects the whole command. The existing 512-character command limit still applies.
+
+Render Free persistence requires Firestore and a private server credential. Follow [FIRESTORE_SETUP.md](FIRESTORE_SETUP.md) before relying on account records across restarts.
+
+Friends is available to every signed-in rank through the sidebar and flight toolbar. Send requests by exact pilot name, accept/decline received requests, cancel sent requests, and remove friends. Friends and requests are account-based and persist with the account registry (Firestore on Render). The full Pilots list stays Moderator-only. Pilots shows access levels and refreshes every three seconds while open. Closing a tab sends a presence beacon; lost connections expire after about 12 seconds, plus the list refresh delay.
+
+Pilots supports filtering by access level and sorting by rank (highest/lowest), name, or online status. Friends supports private text chat, persistent named notices for request and friendship changes, and Moderator commands `/friendadd`, `/friendremove`, `/friendaddall` and `/friendremoveall`. Pilot names in commands must be double-quoted; parenthesized groups can be used in either pilot-name field. Staff commands notify both affected pilots.
+
+Friendship command pairs require comma-separated quoted names inside parentheses: `/friendadd ("Alice", "Bob")` and `/friendremove ("Alice", "Bob")`. The all-pilots forms remain `/friendaddall "Alice"` and `/friendremoveall "Alice"`. Friend changes use queued popups on arrival or after login for unseen notifications; the Updates section is removed.

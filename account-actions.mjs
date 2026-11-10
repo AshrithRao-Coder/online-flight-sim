@@ -44,6 +44,11 @@ export function accountLock(user) {
     : null;
 }
 export function accountRoster(access) {
+  const now = Date.now(), online = new Set();
+  const connected = new Set([...(access.hub?.clients || [])].filter(c => c.lastSeen > now - 12000).map(c => c.authToken));
+  for (const [token, session] of access.sessions) {
+    if (session.uid && session.expires > now && !session.presenceAway && (session.lastSeen > now - 12000 || connected.has(token))) online.add(session.uid);
+  }
   return [...access.accounts.users.values()]
     .map((user) => ({
       uid: user.uid,
@@ -54,14 +59,7 @@ export function accountRoster(access) {
       rankChangedBy: user.rankChangedBy || user.giftedBy || null,
       codeChangesLocked: !!user.codeChangesLocked,
       codeLockBy: user.codeLockBy || null,
-      online:
-        [...(access.hub?.clients || [])].some(
-          (c) => access.sessions.get(c.authToken)?.uid === user.uid,
-        ) ||
-        ([...access.sessions.values()].some(
-          (s) => s.uid === user.uid && s.expires > Date.now(),
-        ) &&
-          user.lastSeen > Date.now() - 45000),
+      online: online.has(user.uid),
       lock: accountLock(user),
       mutedUntil: user.mutedUntil || 0,
       disarmedUntil: user.disarmedUntil || 0,

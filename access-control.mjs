@@ -1,3 +1,4 @@
+import {friendsState, friendAction, friendMessages, executeFriendCommand} from './friends.mjs';
 import {
   accountLock,
   accountRole,
@@ -275,13 +276,18 @@ export class AccessControl {
       token = /^Bearer ([a-f0-9]{64})$/.exec(
         req.headers.authorization || "",
       )?.[1];
-    const send = (status, data) =>
-      res
+    const send = async (status, data) => {
+      if (this.flushStorage) {
+        try { await this.flushStorage(); }
+        catch { status = 503; data = {error: "Account storage unavailable. Please retry; changes have not been confirmed."}; }
+      }
+      return res
         .writeHead(status, {
           "Content-Type": "application/json",
           "Cache-Control": "no-store",
         })
         .end(JSON.stringify(data));
+    };
     if (req.headers.origin) {
       try {
         if (new URL(req.headers.origin).host !== req.headers.host)
@@ -306,6 +312,8 @@ export class AccessControl {
           ...(s.account ? { account: s.account } : {}),
         });
       }
+      if (req.method === "GET" && path === "friends-chat") return send(200, friendMessages(this, token, url.searchParams.get('pilot')));
+      if (req.method === "GET" && path === "friends") return send(200, friendsState(this, token));
       if (req.method === "GET" && path === "pilots") {
         const session = this.session(token);
         if (!session?.uid)
@@ -317,6 +325,7 @@ export class AccessControl {
         return send(200, {
           pilots: accountRoster(this).map((p) => ({
             name: p.name,
+            role: p.role,
             online: p.online,
           })),
         });
@@ -326,6 +335,7 @@ export class AccessControl {
         if (!s?.uid) return send(401, { error: "Reconnect your account." });
         const user = this.accounts.users.get(s.uid);
         user.lastSeen = Date.now();
+        Object.assign(this.sessions.get(token), {lastSeen: Date.now()});
         return send(200, {
           moderation: accountLock(user),
           mutedUntil: user.mutedUntil || 0,
@@ -344,6 +354,20 @@ export class AccessControl {
           return send(413, { error: "Request too large." });
       }
       const body = JSON.parse(raw || "{}");
+      if (path === "friends") return send(200, friendAction(this, token, body));
+      if (path === "presence-resume") {
+        const current = this.sessions.get(token);
+        if (current) Object.assign(current, {presenceAway:false,lastSeen:Date.now()});
+        return send(200, {ok:true});
+      }
+      if (path === "presence-leave") {
+        const beaconToken = typeof body.sessionToken === 'string' && /^[a-f0-9]{64}$/.test(body.sessionToken) ? body.sessionToken : null;
+        const current = this.sessions.get(token || beaconToken);
+        if (current) current.presenceAway = true;
+        return send(200, {ok: true});
+      }
+      if (path === "command" && ['friendadd','friendaddall','friendremove','friendremoveall'].includes(body.name))
+        return send(200, executeFriendCommand(this,token,body.name,body.args,body.groups));
       if (path === "command")
         return send(
           200,

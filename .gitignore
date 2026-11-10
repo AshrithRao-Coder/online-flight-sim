@@ -5,3 +5,9 @@ ACCESS_CODES.local.txt
 
 .ofs-accounts.json
 .ofs-accounts.json.tmp
+
+node_modules/
+*service-account*.json
+*firebase-adminsdk*.json
+.env
+.env.*

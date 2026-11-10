@@ -5,6 +5,7 @@ import zlib from 'node:zlib';
 import {fileURLToPath} from 'node:url';
 import {attachMultiplayer} from './multiplayer-server.mjs';
 import {AccessControl} from './access-control.mjs';
+import {connectFirestore} from './firestore-storage.mjs';
 // The game files: ROOT if set; dist/ when run from the project (npm run dev);
 // otherwise this file's own folder - the published site, where the build
 // copies this server in as server.mjs (for hosts such as Render).
@@ -161,6 +162,8 @@ function serveFile(req,res,file,stat){
 // HOST overrides either way.
 const PORT=Number(process.env.PORT)||4173,HOST=process.env.HOST||(process.env.PORT?'0.0.0.0':'127.0.0.1');
 const access=new AccessControl({file:process.env.OFS_ACCESS_FILE||path.resolve('.ofs-access-codes.json'),accountsFile:process.env.OFS_ACCOUNTS_FILE||path.resolve('.ofs-accounts.json')});
+await connectFirestore(access);
+if(process.env.RENDER && process.env.OFS_STORAGE !== 'firestore') console.error('WARNING: accounts use temporary Render storage. Configure OFS_STORAGE=firestore.');
 const server=http.createServer((req,res)=>{
   const url=new URL(req.url,'http://localhost');
   if(url.pathname.startsWith('/api/access/')){access.handle(req,res,url);return;}
@@ -173,7 +176,7 @@ const server=http.createServer((req,res)=>{
   if(!file.startsWith(root+path.sep)&&file!==root){res.writeHead(403).end();return;}
   // Never serve dot-files and folders (.git) or the server itself.
   const rel=path.relative(root,file);
-  if(rel.split(path.sep).some((part)=>part.startsWith('.'))||['server.mjs','multiplayer-server.mjs','access-control.mjs','firebase-accounts.mjs','room-commands.mjs','account-actions.mjs','ACCESS_CODES.local.txt'].includes(rel)){res.writeHead(404).end('Not found');return;}
+  if(rel.split(path.sep).some((part)=>part.startsWith('.')||part==='node_modules')||['server.mjs','multiplayer-server.mjs','access-control.mjs','firebase-accounts.mjs','firestore-storage.mjs','friends.mjs','room-commands.mjs','account-actions.mjs','ACCESS_CODES.local.txt'].includes(rel)){res.writeHead(404).end('Not found');return;}
   let stat=fs.statSync(file,{throwIfNoEntry:false});
   if(stat?.isDirectory()){file=path.join(file,'index.html');stat=fs.statSync(file,{throwIfNoEntry:false});}
   if(!stat?.isFile()){res.writeHead(404).end('Not found');return;}
