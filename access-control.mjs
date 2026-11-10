@@ -298,7 +298,7 @@ export class AccessControl {
     }
     try {
       if (req.method === "GET" && path === "status")
-        return send(200, { enabled: true, firebase: true });
+        return send(200, { enabled: true, firebase: true, storage: this.flushStorage ? "firestore" : "local", firebaseDirectory: !!this.syncFirebaseDirectory });
       if (req.method === "GET" && path === "session") {
         const s = this.session(token, { allowLocked: true });
         if (!s?.account?.emailVerified)
@@ -322,6 +322,7 @@ export class AccessControl {
           return send(403, {
             error: "Moderator access required to view pilots.",
           });
+        await this.syncFirebaseDirectory?.();
         return send(200, {
           pilots: accountRoster(this).map((p) => ({
             name: p.name,

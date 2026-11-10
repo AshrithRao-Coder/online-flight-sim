@@ -1,7 +1,8 @@
+import {createFirebaseDirectorySync} from './firebase-directory.mjs';
 import { createHash } from 'node:crypto';
 
 // Server-only storage. Never import this module into the browser bundle.
-export async function connectFirestore(access, {env = process.env, database} = {}) {
+export async function connectFirestore(access, {env = process.env, database, auth} = {}) {
   if (env.OFS_STORAGE !== 'firestore' && !database) return null;
   if (!database) {
     const {initializeApp, cert} = await import('firebase-admin/app');
@@ -10,7 +11,10 @@ export async function connectFirestore(access, {env = process.env, database} = {
     try { credentials = JSON.parse(env.FIREBASE_SERVICE_ACCOUNT_JSON || ''); }
     catch { throw Error('Set FIREBASE_SERVICE_ACCOUNT_JSON in the server environment, not in the repository.'); }
     if (credentials.project_id !== 'online-flight-sim') throw Error('Firebase service account belongs to the wrong project.');
-    database = getFirestore(initializeApp({credential: cert(credentials)}, 'game-storage'));
+    const app=initializeApp({credential: cert(credentials)}, 'game-storage');
+    database = getFirestore(app);
+    const {getAuth}=await import('firebase-admin/auth');
+    auth = getAuth(app);
   }
   const accounts = database.collection('ofs_accounts');
   const codeRef = database.collection('ofs_private').doc('access_codes');
@@ -57,6 +61,11 @@ export async function connectFirestore(access, {env = process.env, database} = {
   access.save = schedule;
   access.flushStorage = flush;
   await flush();
+  if(auth){
+    access.syncFirebaseDirectory=createFirebaseDirectorySync(access,auth);
+    const count=await access.syncFirebaseDirectory();
+    console.log('Firebase account directory synchronized ('+count+' missing accounts imported).');
+  }
   console.log('Account storage: Firestore (persistent)');
   return {flush};
 }
