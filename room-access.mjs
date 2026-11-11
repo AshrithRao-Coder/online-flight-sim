@@ -1,4 +1,6 @@
 ﻿import crypto from "node:crypto";
+import { rank } from "./access-policy.js";
+import { accountRole } from "./account-actions.mjs";
 const label = (u) => u?.pilotName || u?.displayName || "Pilot";
 const friends = (access, a, b) => {
   const x = access.accounts.users.get(a),
@@ -10,18 +12,21 @@ const friends = (access, a, b) => {
       (y.friendships || []).some((e) => e.to === a && e.state === "accepted"))
   );
 };
-function peerRoom(access, uid) {
+function peerRoom(access, uid, roomId) {
   const hub = access.hub;
   if (!hub) return null;
-  const peer = [...hub.clients].find(
+  const peer = [...hub.clients].sort((a,b)=>(b.lastSeen || 0)-(a.lastSeen || 0)).find(
     (c) =>
       c.room &&
+      (!roomId || c.room === roomId) &&
+      !c.socket?.destroyed && !c.presenceAway &&
+      (!c.lastSeen || c.lastSeen > Date.now()-45000) &&
       hub.rooms.has(c.room) &&
-      access.session(c.authToken)?.uid === uid,
+      access.session(c.authToken)?.uid === uid && !access.session(c.authToken)?.presenceAway,
   );
   return peer ? hub.rooms.get(peer.room) : null;
 }
-export function friendRoomSummary(access, uid) {
+export function friendRoomSummary(access, uid, viewerToken) {
   const room = peerRoom(access, uid);
   return room
     ? {
@@ -29,6 +34,7 @@ export function friendRoomSummary(access, uid) {
         private: !!room.private,
         mode: room.mode,
         full: access.hub.members(room.id).length >= 24,
+        current: !!viewerToken && [...access.hub.clients].some(c=>c.authToken===viewerToken && c.room===room.id),
       }
     : null;
 }
@@ -49,11 +55,14 @@ function info(access, room) {
     max: 24,
   };
 }
-function ready(access, room) {
+function ready(access, room, uid, token) {
   if (!room) throw Error("That room no longer exists.");
+  if (token && [...access.hub.clients].some(c=>c.authToken===token && c.room===room.id)) return;
   if (access.hub.members(room.id).length >= 24)
     throw Error("Room full. Try again when a pilot leaves.");
-  if (room.locked || access.hub.lobbyLocked)
+  const role = accountRole(access, access.accounts.users.get(uid));
+  if ((room.locked && (!room.lockUntil || room.lockUntil>Date.now()) && rank(role)<(room.lockRank ?? rank("manager"))) ||
+      (access.hub.lobbyLocked && (!access.hub.lobbyLockedUntil || access.hub.lobbyLockedUntil>Date.now()) && role!=="admin"))
     throw Error("Room joining is locked by staff.");
 }
 function notify(access, uid, text, from) {
@@ -79,7 +88,8 @@ function requests(access) {
       r.expires <= Date.now() ||
       !hub.rooms.has(r.roomId) ||
       !friends(access, r.from, r.friend) ||
-      peerRoom(access, r.friend)?.id !== r.roomId
+      !peerRoom(access, r.friend, r.roomId) ||
+      !!peerRoom(access, r.from, r.roomId)
     )
       hub.joinRequests.delete(id);
   return hub.joinRequests;
@@ -123,6 +133,12 @@ export function roomAccessAction(
   const me = current(access, token),
     hub = access.hub,
     list = requests(access);
+  if (action === "join-owned") {
+    const room = hub.rooms.get(roomId);
+    if (!room || room.ownerUid !== me.uid) throw Error("Only the creator can join through Your rooms.");
+    ready(access, room, me.uid, token);
+    return {room:info(access,room),text:"Connected to " + room.name + "."};
+  }
   if (action === "delete") {
     const room = hub.rooms.get(roomId);
     if (!room) throw Error("That room no longer exists.");
@@ -155,9 +171,9 @@ export function roomAccessAction(
       throw Error("You can join only an accepted friend through Friends.");
     const room = peerRoom(access, targetId);
     if (!room) throw Error("This friend is not in a multiplayer room.");
-    ready(access, room);
-    if (!room.private || room.ownerUid === me.uid)
-      return { room: info(access, room), text: "Joined " + room.name + "." };
+    ready(access, room, me.uid, token);
+    if (!room.private || room.ownerUid === me.uid || [...hub.clients].some(c=>c.authToken===token && c.room===room.id))
+      return { room: info(access, room), text: "Connected to " + room.name + "." };
     if (!room.ownerUid)
       throw Error(
         "This private room has no available owner. Ask your friend for its room code.",
@@ -174,6 +190,10 @@ export function roomAccessAction(
       [...list.values()].filter((r) => r.roomId === room.id).length >= 50
     )
       throw Error("Too many pending room requests. Please wait.");
+    hub.roomRequestRates ??= new Map();
+    const recent = (hub.roomRequestRates.get(me.uid) || []).filter(t=>t>Date.now()-60000);
+    if (recent.length >= 10) throw Error("Too many room requests. Wait a minute before trying again.");
+    hub.roomRequestRates.set(me.uid, [...recent, Date.now()]);
     const r = {
       id: crypto.randomUUID(),
       from: me.uid,
@@ -207,7 +227,8 @@ export function roomAccessAction(
     if (room.ownerUid !== me.uid)
       throw Error("Only the private-room owner can respond.");
     if (action === "approve") {
-      ready(access, room);
+      if (r.status === "approved") return {text:"Join request already approved."};
+      ready(access, room, r.from);
       r.status = "approved";
       notify(
         access,
@@ -219,6 +240,7 @@ export function roomAccessAction(
         me.uid,
       );
     } else {
+      if (r.status !== "pending") throw Error("This request has already been approved.");
       list.delete(r.id);
       notify(
         access,
@@ -246,8 +268,8 @@ export function roomAccessAction(
   if (action === "join") {
     if (r.status !== "approved")
       throw Error("Wait for the private-room owner to approve your request.");
-    ready(access, room);
-    return { room: info(access, room), text: "Joined " + room.name + "." };
+    ready(access, room, me.uid, token);
+    return { room: info(access, room), text: "Connected to " + room.name + "." };
   }
   throw Error("Unknown room action.");
 }

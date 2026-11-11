@@ -610,7 +610,7 @@ export class MultiplayerHub {
         });
         return;
       }
-      if (this.lobbyLocked && this.access.role(c.authToken) !== "admin") {
+      if (this.lobbyLocked && (!this.lobbyLockedUntil || this.lobbyLockedUntil>Date.now()) && this.access.role(c.authToken) !== "admin") {
         c.send({ t: "error", error: "Lobby joining is locked by Admin." });
         return;
       }
@@ -625,7 +625,6 @@ export class MultiplayerHub {
         });
         return;
       }
-      if (c.room) return;
       let room;
       if (m.create && typeof m.create === "object") {
         // A new room. One player may make a few an hour.
@@ -673,16 +672,18 @@ export class MultiplayerHub {
         }
       }
       if (
-        room.locked &&
+        room.locked && (!room.lockUntil || room.lockUntil>Date.now()) &&
         rank(this.access.role(c.authToken)) < (room.lockRank ?? rank("manager"))
       ) {
         c.send({ t: "error", error: "This room is locked." });
         return;
       }
-      if (this.members(room.id).length >= MAX_ROOM) {
+      if (this.members(room.id).filter(p=>p!==c).length >= MAX_ROOM) {
         c.send({ t: "error", error: "That room is full. Try another." });
         return;
       }
+      const alreadyJoined = c.room === room.id;
+      if (c.room && !alreadyJoined) this.exit(c);
       c.room = room.id;
       room.empty = null;
       const account = this.access.session(c.authToken)?.account;
@@ -693,7 +694,7 @@ export class MultiplayerHub {
       if (this.members(room.id).some((o) => o !== c && o.name === c.name))
         c.name = `${c.name.slice(0, 13)} ${c.id % 100}`;
       c.aircraft = validAircraft(m.aircraft) ? m.aircraft : "f16";
-      c.kills = c.deaths = 0;
+      if (!alreadyJoined) c.kills = c.deaths = 0;
       c.send({
         t: "welcome",
         id: c.id,
@@ -711,7 +712,7 @@ export class MultiplayerHub {
           .filter((o) => o !== c)
           .map((o) => o.info),
       });
-      this.broadcast(room.id, { t: "join", p: c.info }, c);
+      if (!alreadyJoined) this.broadcast(room.id, { t: "join", p: c.info }, c);
       this.checkArmed(room.id);
       return;
     }

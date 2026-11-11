@@ -102,7 +102,7 @@ export function friendsState(access, token) {
         name: other.name,
         role: other.role,
         online: other.online,
-        room:friendRoomSummary(access,other.uid),
+        room:friendRoomSummary(access,other.uid,token),
       });
     }
   for (const key of ["friends", "incoming", "outgoing"])
