@@ -1,3 +1,4 @@
+import {roomAccessState,roomAccessAction} from './room-access.mjs';
 import {friendsState, friendAction, friendMessages, executeFriendCommand} from './friends.mjs';
 import {
   accountLock,
@@ -312,6 +313,7 @@ export class AccessControl {
           ...(s.account ? { account: s.account } : {}),
         });
       }
+      if (req.method === "GET" && path === "room-access") return send(200,roomAccessState(this,token));
       if (req.method === "GET" && path === "friends-chat") return send(200, friendMessages(this, token, url.searchParams.get('pilot')));
       if (req.method === "GET" && path === "friends") return send(200, friendsState(this, token));
       if (req.method === "GET" && path === "pilots") {
@@ -355,6 +357,7 @@ export class AccessControl {
           return send(413, { error: "Request too large." });
       }
       const body = JSON.parse(raw || "{}");
+      if (path === "room-access") return send(200,roomAccessAction(this,token,body));
       if (path === "friends") return send(200, friendAction(this, token, body));
       if (path === "presence-resume") {
         const current = this.sessions.get(token);

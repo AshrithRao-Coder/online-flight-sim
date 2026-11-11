@@ -447,6 +447,7 @@ export class MultiplayerHub {
         name: room.name,
         mode: room.mode,
         private: room.private,
+          ...(room.ownerUid?{ownerId:room.ownerUid}:{}),
       },
       combat: room.mode === "dogfight",
       players: this.members(room.id)
@@ -653,6 +654,7 @@ export class MultiplayerHub {
           ),
           mode: m.create.mode === "dogfight" ? "dogfight" : "free",
           private: !!m.create.private,
+          ownerUid:this.access.session(c.authToken)?.uid,
           empty: null,
         };
         this.rooms.set(room.id, room);
@@ -702,6 +704,7 @@ export class MultiplayerHub {
           name: room.name,
           mode: room.mode,
           private: room.private,
+          ...(room.ownerUid?{ownerId:room.ownerUid}:{}),
         },
         combat: room.mode === "dogfight",
         players: this.members(room.id)

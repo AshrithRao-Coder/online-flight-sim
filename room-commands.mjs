@@ -164,6 +164,7 @@ export function executeServerCommand(hub, c, name, args, profile = {}) {
         name: room.name,
         mode: room.mode,
         private: room.private,
+        ...(room.ownerUid?{ownerId:room.ownerUid}:{}),
         locked: !!room.locked,
         topic: room.topic || "",
       },

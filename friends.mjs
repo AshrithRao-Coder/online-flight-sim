@@ -1,3 +1,4 @@
+import {friendRoomSummary} from './room-access.mjs';
 ﻿import crypto from "node:crypto";
 import { accountRoster } from "./account-actions.mjs";
 import { rank } from "./access-policy.js";
@@ -101,6 +102,7 @@ export function friendsState(access, token) {
         name: other.name,
         role: other.role,
         online: other.online,
+        room:friendRoomSummary(access,other.uid),
       });
     }
   for (const key of ["friends", "incoming", "outgoing"])

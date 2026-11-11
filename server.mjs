@@ -176,7 +176,7 @@ const server=http.createServer((req,res)=>{
   if(!file.startsWith(root+path.sep)&&file!==root){res.writeHead(403).end();return;}
   // Never serve dot-files and folders (.git) or the server itself.
   const rel=path.relative(root,file);
-  if(rel.split(path.sep).some((part)=>part.startsWith('.')||part==='node_modules')||['server.mjs','multiplayer-server.mjs','access-control.mjs','firebase-accounts.mjs','firestore-storage.mjs','firebase-directory.mjs','friends.mjs','room-commands.mjs','account-actions.mjs','ACCESS_CODES.local.txt'].includes(rel)){res.writeHead(404).end('Not found');return;}
+  if(rel.split(path.sep).some((part)=>part.startsWith('.')||part==='node_modules')||['server.mjs','multiplayer-server.mjs','access-control.mjs','firebase-accounts.mjs','firestore-storage.mjs','firebase-directory.mjs','friends.mjs','room-access.mjs','room-commands.mjs','account-actions.mjs','ACCESS_CODES.local.txt'].includes(rel)){res.writeHead(404).end('Not found');return;}
   let stat=fs.statSync(file,{throwIfNoEntry:false});
   if(stat?.isDirectory()){file=path.join(file,'index.html');stat=fs.statSync(file,{throwIfNoEntry:false});}
   if(!stat?.isFile()){res.writeHead(404).end('Not found');return;}
